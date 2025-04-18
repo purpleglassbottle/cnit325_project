@@ -8,8 +8,11 @@ package cardgame;
 */
 
 import java.util.*;
+import java.io.*;
+import java.net.*;
+import java.util.Scanner;
 
-public class Session {
+public class GameServer {
     // Define players..
     ArrayList<Player> players = new ArrayList();
         
@@ -28,6 +31,34 @@ public class Session {
     boolean isReversed = false;
     boolean draw2 = false;
     boolean draw4 = false;
+    
+    private ServerSocket serverSocket;
+    private ArrayList<ClientHandler> clients = new ArrayList<>();
+
+    public void startNetwork(int port) {
+        try {
+            serverSocket = new ServerSocket(port);
+            System.out.println("Server started on port " + port);
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                ClientHandler handler = new ClientHandler(clientSocket, this);
+                clients.add(handler);
+                new Thread(handler).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void broadcast(String msg) {
+        for (ClientHandler client : clients) {
+            client.sendMessage(msg);
+        }
+    }
+
+    public ArrayList<ClientHandler> getClients() {
+        return clients;
+    }
     
     public void startGame(Game gameChoice) {
         // Create player list.
@@ -74,6 +105,10 @@ public class Session {
             currentPlayer = (Player)players.get(turn);
             System.out.println("\nCurrent Player: " + currentPlayer.getPlayerName() + "\n");
             
+            // Temporary hardcoded input values for testing
+            int selectedIndex = 0;
+            String chosenColor = "r";
+            
             // Check for rule changes.
             if(isSkipped == true) {
                 System.out.println("SKIPPED");
@@ -104,7 +139,7 @@ public class Session {
             }
             
             // Have the player make a play.
-            ruleChange = game.playCard(currentPlayer);
+            ruleChange = ((GameUno) game).playCard(currentPlayer, selectedIndex, chosenColor);
             
             // Check if the player has won.
             if(currentPlayer.getHand().isEmpty()) {
@@ -146,13 +181,16 @@ public class Session {
         // Define attributes.
         boolean sessionOver = false;
         
+        // Scanner for reading input (replaces System.console().readLine())
+        Scanner scanner = new Scanner(System.in);
+        
         // Create a new session and start a game.
-        Session session = new Session();
+        GameServer server = new GameServer();
         
         while(sessionOver == false) {
             // Get the player's input from the console.
             System.out.println("Which game would you like to play?\n0. UNO\n1. Exit");
-            String rawInput = System.console().readLine();
+            String rawInput = scanner.nextLine();
 
             // Try to convert the player's input into an integer.
             try {
@@ -161,8 +199,8 @@ public class Session {
                 // Play the chosen game.
                 switch(input) {
                     case 0: 
-                        session.startGame(new GameUno());
-                        session.playGameUno();
+                        server.startGame(new GameUno());
+                        server.playGameUno();
 
                         break;
                     case 1:

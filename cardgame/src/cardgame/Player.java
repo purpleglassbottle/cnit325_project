@@ -11,7 +11,7 @@ import java.util.*;
 
 public class Player {
     // Define attributes.
-    ArrayList<Card> hand = new ArrayList();
+    ArrayList<Card> hand = new ArrayList<Card>(); 
     
     int playerId;
     String playerName;
@@ -23,7 +23,7 @@ public class Player {
     }
     
     // Getters.
-    public ArrayList getHand() {
+    public ArrayList<Card> getHand() {
         return hand;
     }
     
