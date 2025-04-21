@@ -187,6 +187,9 @@ public class GameServer {
         // Create a new session and start a game.
         GameServer server = new GameServer();
         
+        // Connect to a Server
+        server.startNetwork(12345);
+        
         while(sessionOver == false) {
             // Get the player's input from the console.
             System.out.println("Which game would you like to play?\n0. UNO\n1. Exit");
