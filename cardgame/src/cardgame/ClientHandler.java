@@ -49,7 +49,7 @@ public class ClientHandler implements Runnable
     }
 
     //Override
-    public void run() 
+    public void run()  
     {
         try 
         {
@@ -79,16 +79,32 @@ public class ClientHandler implements Runnable
                     server.broadcast("Game over!");
                     break;
                 } 
+                
+                else if (clientMessage.startsWith("START")) {
+                    String[] parts = clientMessage.split(" ");
+                    if (parts.length >= 2) {
+                        try {
+                            int expected = Integer.parseInt(parts[1]);
+                            server.setExpectedPlayers(expected);
+                            sendMessage("[Client] Sent expected player count: " + expected);
+                        } catch (NumberFormatException e) {
+                            sendMessage("Invalid START command format.");
+                        }
+                    } else {
+                        sendMessage("Missing player count in START command.");
+                    }
+                }
+                
                 else if (clientMessage.startsWith("PLAY_CARD")) 
                 {
                     // emily
                     // if syntax looks something like: PLAY_CARD <handIndex> [colorCode] 
-                    String[] parts = clientMessage.split("");
-                    if(parts.length < 2){
+                    String[] parts = clientMessage.split("\\s+");
+                    if (parts.length < 2){
                         sendMessage("play is rejected: missing index error");
                         continue;
                     }
-                    try{
+                    try {
                         int index = Integer.parseInt(parts[1]);
                         String color = (parts.length >= 3) ? parts[2] : null;
                         server.processPlay(this, index, color);
@@ -116,6 +132,15 @@ public class ClientHandler implements Runnable
             // tell server of disconnect
             server.removeClient(this);
         } 
+    }
+    
+    public void initializeStreams() {
+        try {
+            this.in = new Scanner(clientSocket.getInputStream());
+            this.out = new PrintWriter(clientSocket.getOutputStream(), true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     // send messages to the client

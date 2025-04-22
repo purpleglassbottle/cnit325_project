@@ -11,14 +11,13 @@ import java.util.*;
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 public class GameServer {
     // Define players.
     ArrayList<Player> players = new ArrayList();
         
     Player currentPlayer;
-    Player player0 = new Player(0, "Sean");
-    Player player1 = new Player(1, "Dumbass");
     
     // Define game attributes.
     Game game;
@@ -34,6 +33,7 @@ public class GameServer {
     
     private ServerSocket serverSocket;
     private ArrayList<ClientHandler> clients = new ArrayList<>();
+    private int expectedPlayers = 2;
     
     // emily 
     // running game
@@ -41,6 +41,9 @@ public class GameServer {
     //setting play direction for reverses
     private boolean clockwise = true; 
 
+    public void setExpectedPlayers(int expected) {
+        this.expectedPlayers = expected;
+    }
     
     public void startNetwork(int port) {
         try {
@@ -56,13 +59,18 @@ public class GameServer {
                 clients.add(handler);
                 // emily
                 // player object handling
-                Player p = (nextId == 0) ? player0:
-                        (nextId == 1) ? player1 :
-                               new Player(nextId, "Player" + nextId);
+//                Player p = (nextId == 0) ? player0:
+//                        (nextId == 1) ? player1 :
+//                               new Player(nextId, "Player" + nextId);
+                
+                // Cassie
+                Player p = new Player(nextId, "Player" + nextId);
                 // emily
-                //handle player and track
+                // handle player and track
                 handler.setPlayer(p);
                 players.add(p);
+                
+                handler.initializeStreams();
                 
                 new Thread(handler).start();
                 // emily 
@@ -70,8 +78,8 @@ public class GameServer {
                 broadcast("[Server]" + p.getPlayerName() + " joined");
                 nextId++;
                 
-                // launching with 2 players
-                if(!gameStarted && players.size() == 2){
+                // launching with the number of players
+                if(!gameStarted && players.size() == expectedPlayers){
                     startGame(new GameUno());
                     sendTurnPrompt();
                 }
@@ -91,14 +99,25 @@ public class GameServer {
         return clients;
     }
     
+    public void sendInitialHandsToClients() {
+        for (int i = 0; i < clients.size(); i++) {
+            ClientHandler ch = clients.get(i);
+            Player p = players.get(i);
+            String handStr = p.getHand().stream()
+                .map(c -> c.getValue() + "_" + c.getSuit())
+                .collect(Collectors.joining(","));
+            ch.sendMessage("HAND " + handStr);
+        }
+    }
+    
     public void startGame(Game gameChoice) {
         // emily 
         //clear pre-existing players if there are any
-        players.clear();
+//        players.clear();
         
         // Create player list.
-        players.add(player0);
-        players.add(player1);
+//        players.add(player0);
+//        players.add(player1);
         
         game = gameChoice;
         
@@ -113,17 +132,35 @@ public class GameServer {
             game.dealCards(p, game.getDealCount());
         }
         
-        game.dealCards(player0, game.getDealCount());
-        game.dealCards(player1, game.getDealCount());
+//        game.dealCards(player0, game.getDealCount());
+//        game.dealCards(player1, game.getDealCount());
         
         // Create a discard pile.
         game.discard(null, 0);
         // emily
-        //notifying the server
+        // notifying the server
         broadcast("[Server] Game started! Top card is "
                 + game.getTopCard().getSuit() + " "
                 + game.getTopCard().getValue());
         gameStarted = true;
+        
+        // Cassie
+        // Send initial hand to each client
+        for (int i = 0; i < clients.size(); i++) {
+            ClientHandler ch = clients.get(i);
+            Player p = players.get(i);
+            for (Card card : p.getHand()) {
+                ch.sendMessage("CARD " + card.getValue() + " " + card.getSuit());
+//                System.out.println("[Server Send] CARD " + card.getValue() + " " + card.getSuit());
+            }
+            ch.sendMessage("HAND_DONE");
+        }
+        
+        // Send the current top card to all clients after dealing hands
+        Card top = game.getTopCard();
+        for (ClientHandler ch : clients) {
+            ch.sendMessage("TOP_CARD " + top.getValue() + " " + top.getSuit());
+        }
     } // End public void startGame.
     
     
@@ -135,25 +172,6 @@ public class GameServer {
             turn = (turn + 1) % players.size();
         }
     }
-    // commenting this out for now but will test the logic emily added
-//    public void changeTurn() {
-//        // Move to the next turn.
-//        if(isReversed == false) {
-//            // Move up the queue.
-//            if(turn == players.size() - 1) {
-//                turn = 0;
-//            } else {
-//                turn++;
-//            }
-//        } else {
-//            // Move down the queue.
-//            if(turn == 0) {
-//                turn = players.size() - 1;
-//            } else {
-//                turn--;
-//            }
-//        }
-//    }// End public void changeTurn.
     
     // emily
     // telling a player its their turn
@@ -235,122 +253,92 @@ public class GameServer {
         broadcast("[Server] Game over: " + reason);         
         gameStarted = false;                                
     }
-    
-    public void playGameUno() {
-        while(gameOver == false) {
-            // Set the Turn to the corresponding player in order.
-            currentPlayer = (Player)players.get(turn);
-            System.out.println("\nCurrent Player: " + currentPlayer.getPlayerName() + "\n");
-            
-            // Temporary hardcoded input values for testing
-            int selectedIndex = 0;
-            String chosenColor = "r";
-            
-            // Check for rule changes.
-            if(isSkipped == true) {
-                System.out.println("SKIPPED");
-                
-                this.changeTurn();
-                
-                isSkipped = false;
-                
-                continue;
-            } else if(draw2 == true) {
-                System.out.println("DRAW 2");
-                
-                game.dealCards(currentPlayer, 2);
-                this.changeTurn();
-                
-                draw2 = false;
-                
-                continue;
-            } else if(draw4 == true) {
-                System.out.println("DRAW 4");
-                
-                game.dealCards(currentPlayer, 4);
-                this.changeTurn();
-                
-                draw4 = false;
-                
-                continue;
-            }
-            
-            // Have the player make a play.
-            ruleChange = ((GameUno) game).playCard(currentPlayer, selectedIndex, chosenColor);
-            
-            // Check if the player has won.
-            if(currentPlayer.getHand().isEmpty()) {
-                System.out.println(currentPlayer.getPlayerName() + " has won!");
-                
-                gameOver = true;
-            }
-            
-            // Check for a rule change.
-            switch(ruleChange) {
-                case 0: // No change. 
-                    break;
-                case 1: // Skip the next player.
-                    isSkipped = true;
-                    
-                    break;
-                case 2: // The next player must draw 2 cards.
-                    draw2 = true;
-                    
-                    break;
-                case 3: // Reverse the turn order.
-                    isReversed = true;
-                    
-                    break;
-                case 4: // The next player must draw 4 cards.
-                    draw4 = true;
-                    
-                    break;
-            } // End switch case.
-            
-            this.changeTurn();
-        } // End while loop.
-        
-        // Reset gameOver.
-        gameOver = false;
-    } // End public void playGameUno.
+
+      // Cassie
+      // Old console-based game loop. Not used anymore.
+//    public void playGameUno() {
+//        while(gameOver == false) {
+//            // Set the Turn to the corresponding player in order.
+//            currentPlayer = (Player)players.get(turn);
+//            System.out.println("\nCurrent Player: " + currentPlayer.getPlayerName() + "\n");
+//            
+//            // Temporary hardcoded input values for testing
+//            int selectedIndex = 0;
+//            String chosenColor = "r";
+//            
+//            // Check for rule changes.
+//            if(isSkipped == true) {
+//                System.out.println("SKIPPED");
+//                
+//                this.changeTurn();
+//                
+//                isSkipped = false;
+//                
+//                continue;
+//            } else if(draw2 == true) {
+//                System.out.println("DRAW 2");
+//                
+//                game.dealCards(currentPlayer, 2);
+//                this.changeTurn();
+//                
+//                draw2 = false;
+//                
+//                continue;
+//            } else if(draw4 == true) {
+//                System.out.println("DRAW 4");
+//                
+//                game.dealCards(currentPlayer, 4);
+//                this.changeTurn();
+//                
+//                draw4 = false;
+//                
+//                continue;
+//            }
+//            
+//            // Have the player make a play.
+//            ruleChange = ((GameUno) game).playCard(currentPlayer, selectedIndex, chosenColor);
+//            
+//            // Check if the player has won.
+//            if(currentPlayer.getHand().isEmpty()) {
+//                System.out.println(currentPlayer.getPlayerName() + " has won!");
+//                
+//                gameOver = true;
+//            }
+//            
+//            // Check for a rule change.
+//            switch(ruleChange) {
+//                case 0: // No change. 
+//                    break;
+//                case 1: // Skip the next player.
+//                    isSkipped = true;
+//                    
+//                    break;
+//                case 2: // The next player must draw 2 cards.
+//                    draw2 = true;
+//                    
+//                    break;
+//                case 3: // Reverse the turn order.
+//                    isReversed = true;
+//                    
+//                    break;
+//                case 4: // The next player must draw 4 cards.
+//                    draw4 = true;
+//                    
+//                    break;
+//            } // End switch case.
+//            
+//            this.changeTurn();
+//        } // End while loop.
+//        
+//        // Reset gameOver.
+//        gameOver = false;
+//    } // End public void playGameUno.
     
     public static void main(String[] args) {
-        // Define attributes.
-        boolean sessionOver = false;
-        
-        // Scanner for reading input (replaces System.console().readLine())
-        Scanner scanner = new Scanner(System.in);
-        
         // Create a new session and start a game.
         GameServer server = new GameServer();
-        
         // Connect to a Server
         server.startNetwork(12345);
         
-        while(sessionOver == false) {
-            // Get the player's input from the console.
-            System.out.println("Which game would you like to play?\n0. UNO\n1. Exit");
-            String rawInput = scanner.nextLine();
-
-            // Try to convert the player's input into an integer.
-            try {
-                int input = Integer.parseInt(rawInput);
-
-                // Play the chosen game.
-                switch(input) {
-                    case 0: 
-                        server.startGame(new GameUno());
-                        server.playGameUno();
-
-                        break;
-                    case 1:
-                        sessionOver = true;
-
-                        break;
-                } // End switch case.
-            } catch(NumberFormatException e) {
-                    System.out.println("INVALID INPUT");
-            }
-        } // End while loop.
     } // End public static void main.
 } // End public class Session. 
