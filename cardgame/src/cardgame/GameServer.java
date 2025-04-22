@@ -13,7 +13,7 @@ import java.net.*;
 import java.util.Scanner;
 
 public class GameServer {
-    // Define players..
+    // Define players.
     ArrayList<Player> players = new ArrayList();
         
     Player currentPlayer;
@@ -34,16 +34,47 @@ public class GameServer {
     
     private ServerSocket serverSocket;
     private ArrayList<ClientHandler> clients = new ArrayList<>();
+    
+    // emily 
+    // running game
+    private boolean gameStarted = false;
+    //setting play direction for reverses
+    private boolean clockwise = true; 
 
+    
     public void startNetwork(int port) {
         try {
             serverSocket = new ServerSocket(port);
             System.out.println("Server started on port " + port);
+            // emily
+            // player id for tracking
+            int nextId = 0;
+            
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 ClientHandler handler = new ClientHandler(clientSocket, this);
                 clients.add(handler);
+                // emily
+                // player object handling
+                Player p = (nextId == 0) ? player0:
+                        (nextId == 1) ? player1 :
+                               new Player(nextId, "Player" + nextId);
+                // emily
+                //handle player and track
+                handler.setPlayer(p);
+                players.add(p);
+                
                 new Thread(handler).start();
+                // emily 
+                // notify player has joined
+                broadcast("[Server]" + p.getPlayerName() + " joined");
+                nextId++;
+                
+                // launching with 2 players
+                if(!gameStarted && players.size() == 2){
+                    startGame(new GameUno());
+                    sendTurnPrompt();
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -61,6 +92,10 @@ public class GameServer {
     }
     
     public void startGame(Game gameChoice) {
+        // emily 
+        //clear pre-existing players if there are any
+        players.clear();
+        
         // Create player list.
         players.add(player0);
         players.add(player1);
@@ -73,31 +108,133 @@ public class GameServer {
         
         // Deal cards to players.
         game.setDealCount();
+        // emily
+        for (Player p : players){
+            game.dealCards(p, game.getDealCount());
+        }
+        
         game.dealCards(player0, game.getDealCount());
         game.dealCards(player1, game.getDealCount());
         
         // Create a discard pile.
         game.discard(null, 0);
+        // emily
+        //notifying the server
+        broadcast("[Server] Game started! Top card is "
+                + game.getTopCard().getSuit() + " "
+                + game.getTopCard().getValue());
+        gameStarted = true;
     } // End public void startGame.
     
+    
+    //  emily play flow control ? 
     public void changeTurn() {
-        // Move to the next turn.
-        if(isReversed == false) {
-            // Move up the queue.
-            if(turn == players.size() - 1) {
-                turn = 0;
-            } else {
-                turn++;
-            }
-        } else {
-            // Move down the queue.
-            if(turn == 0) {
-                turn = players.size() - 1;
-            } else {
-                turn--;
-            }
+        if(!clockwise){
+            turn = (turn - 1 + players.size()) % players.size();
+        } else{
+            turn = (turn + 1) % players.size();
         }
-    }// End public void changeTurn.
+    }
+    // commenting this out for now but will test the logic emily added
+//    public void changeTurn() {
+//        // Move to the next turn.
+//        if(isReversed == false) {
+//            // Move up the queue.
+//            if(turn == players.size() - 1) {
+//                turn = 0;
+//            } else {
+//                turn++;
+//            }
+//        } else {
+//            // Move down the queue.
+//            if(turn == 0) {
+//                turn = players.size() - 1;
+//            } else {
+//                turn--;
+//            }
+//        }
+//    }// End public void changeTurn.
+    
+    // emily
+    // telling a player its their turn
+    private void sendTurnPrompt(){
+        clients.get(turn).sendMessage("Your turn");
+    }
+    
+    // emily
+    public synchronized void processPlay(ClientHandler src, int idx, String color){
+        if (!gameStarted) {
+            src.sendMessage("play rejected: The game has not started");     
+            return;
+        }
+        if (clients.get(turn) != src) {                     
+            src.sendMessage("play rejected: Not your turn");  
+            return;
+        }
+        
+        int result = ((GameUno) game).playCard(src.getPlayer(), idx, color); 
+        if (result == -1) {                                 
+            src.sendMessage("playe rejected: Against the rules");    
+            return;
+        }
+        
+        broadcast("played " + src.getPlayer().getPlayerName()
+                + " played " + game.getTopCard().getSuit() + " "
+                + game.getTopCard().getValue());            
+        
+        if (src.getPlayer().getHand().isEmpty()) {         
+            endGame(src.getPlayer().getPlayerName() + " wins!"); 
+            return;
+        }
+        
+        applyRuleEffects(result);                          
+        changeTurn();                                       
+        sendTurnPrompt();
+    }
+    
+    // emily
+    private void applyRuleEffects(int rule) {              
+        switch (rule) {
+            case 1:  // Skip
+                changeTurn();                               
+                broadcast("[Server] Player skipped.");      
+                break;
+            case 2:  // Draw 2
+                Player p2 = players.get(turn);              
+                game.dealCards(p2, 2);                     
+                broadcast(p2.getPlayerName() + " draws 2."); 
+                break;
+            case 3:  // Reverse
+                clockwise = !clockwise;                     
+                broadcast("[Server] Direction reversed.");  
+                break;
+            case 4:  // Draw 4
+                Player p4 = players.get(turn);              
+                game.dealCards(p4, 4);                      
+                broadcast(p4.getPlayerName() + " draws 4."); 
+                break;
+        }
+    }
+    
+    // emily
+    public synchronized void removeClient(ClientHandler c) { 
+        int idx = clients.indexOf(c);                     
+        if (idx >= 0) {
+            clients.remove(idx);                            
+            players.remove(idx);                            
+            broadcast("[Server] A player disconnected.");   
+            if (clients.size() < 2 && gameStarted) {        
+                endGame("Not enough players.");            
+            }
+            if (turn >= clients.size()) turn = 0;           
+        }
+    }
+    
+    // emily
+    public void endGame(String reason) {                   
+        broadcast("[Server] Game over: " + reason);         
+        gameStarted = false;                                
+    }
     
     public void playGameUno() {
         while(gameOver == false) {

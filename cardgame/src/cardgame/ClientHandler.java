@@ -27,12 +27,25 @@ public class ClientHandler implements Runnable
     private Scanner in;
     private InputStream inStream;
     private OutputStream outStream;
+    
+    // emily
+    // references player
+    private Player player;
 
-    //constructor
+    // emily
+    // constructor
     public ClientHandler(Socket s, GameServer server) 
     {
         this.clientSocket = s;
         this.server = server;
+    }
+    
+    public void setPlayer(Player player){
+        this.player = player;
+    }
+    
+    public Player getPlayer(){
+        return player;
     }
 
     //Override
@@ -44,19 +57,48 @@ public class ClientHandler implements Runnable
             in = new Scanner(clientSocket.getInputStream());
             out = new PrintWriter(clientSocket.getOutputStream(), true);
 
+            // will display if connection is successful
+            out.println("You are connected to the game!");
+            
             while (in.hasNextLine()) 
             {
-                String clientMessage = in.nextLine();
+                // emily
+                // added trim
+                String clientMessage = in.nextLine().trim();
                 System.out.println("Received from client: " + clientMessage);
                 // handle client message
+                if(clientMessage.isEmpty())
+                    continue;
+                
                 if (clientMessage.equals("END_GAME")) 
                 {
+                    // emily
+                    // notify the server
+                    server.endGame("A player has ended the game");
+                    //idk if below is needed
                     server.broadcast("Game over!");
                     break;
-                } else if (clientMessage.startsWith("PLAY_CARD")) 
+                } 
+                else if (clientMessage.startsWith("PLAY_CARD")) 
                 {
-                    // player plays card
-                    server.broadcast("Player played a card!");
+                    // emily
+                    // if syntax looks something like: PLAY_CARD <handIndex> [colorCode] 
+                    String[] parts = clientMessage.split("");
+                    if(parts.length < 2){
+                        sendMessage("play is rejected: missing index error");
+                        continue;
+                    }
+                    try{
+                        int index = Integer.parseInt(parts[1]);
+                        String color = (parts.length >= 3) ? parts[2] : null;
+                        server.processPlay(this, index, color);
+                    }
+                    catch (NumberFormatException nfexc){
+                        sendMessage("play is rejected: number format exeption");
+                    }
+                }
+                else {
+                    sendMessage("non-specfied error");
                 }
             }
         } catch (IOException e) 
@@ -71,7 +113,9 @@ public class ClientHandler implements Runnable
             {
                 e.printStackTrace();
             }
-        }
+            // tell server of disconnect
+            server.removeClient(this);
+        } 
     }
 
     // send messages to the client
