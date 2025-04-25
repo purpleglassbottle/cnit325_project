@@ -57,9 +57,11 @@ public abstract class Game implements Deck {
     
     // Deal from the deck. From the Deck interface.
     public void dealCards(Player player, int dealCount) {
+        //xiaotong 4/24
+        //fix: change the i to 0
         for(int i = 0; i < dealCount; i++) {
-            player.draw(deck.get(i));
-            deck.remove(i);
+            player.draw(deck.get(0));//used to be i
+            deck.remove(0);//used to be i
         }
-    } // End publuc void dealCards.
+    } // End publuc void dealCards.  
 } // End public class Game.
