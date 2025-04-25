@@ -59,12 +59,12 @@ public class GameUno extends Game {
             topCard = new Card(deck.get(index).getValue(), deck.get(index).getSuit()); 
             deck.remove(index);
         
-            // 如果顶牌是功能牌，重新抽牌（但避免递归）
+            // 
             if (topCard.getValue().equals("Wild") || topCard.getValue().equals("Draw 4")) {
-                topCard.setSuit("Black"); // 默认颜色
+                topCard.setSuit("Black"); 
             } else if (topCard.getValue().equals("Skip") || topCard.getValue().equals("Draw 2")) {
                 if (!deck.isEmpty()) {
-                    discard(null, 0); // 只递归一次
+                    discard(null, 0); 
                 }
               }
         }
