@@ -8,6 +8,12 @@ package cardgame;
 */
 
 public class GameUno extends Game {
+    private Card topCard;
+    
+    //xiaotong 4/24
+    public void setTopCardColor(String color) {
+        topCard.setSuit(color); // Update the top card's suit to the new color
+    }
 
     public void setDealCount() {
         this.dealCount = 7;
@@ -40,14 +46,38 @@ public class GameUno extends Game {
             }
 
             deck.add(new Card("Wild", null));
-            deck.add(new Card("Draw 4", null));
+            deck.add(new Card("Draw 4", null));           
         }
     }
 
+    //xiaotong
+    //updated on 4/24
     public void discard(Player currentPlayer, int index) {
         if (currentPlayer != null) {
-            topCard = currentPlayer.getHand().get(index);
-            currentPlayer.getHand().remove(index);
+            topCard = currentPlayer.getHand().remove(index); 
+        } else {
+            topCard = new Card(deck.get(index).getValue(), deck.get(index).getSuit()); 
+            deck.remove(index);
+        
+            // 如果顶牌是功能牌，重新抽牌（但避免递归）
+            if (topCard.getValue().equals("Wild") || topCard.getValue().equals("Draw 4")) {
+                topCard.setSuit("Black"); // 默认颜色
+            } else if (topCard.getValue().equals("Skip") || topCard.getValue().equals("Draw 2")) {
+                if (!deck.isEmpty()) {
+                    discard(null, 0); // 只递归一次
+                }
+              }
+        }
+        //to check whether topCard has been updated
+        System.out.println("New top card: " + topCard.getValue() + " " + topCard.getSuit());
+    }
+    
+    
+    
+    //deleted by xiaotong for now
+    /*public void discard(Player currentPlayer, int index) {
+        if (currentPlayer != null) {
+            topCard = currentPlayer.getHand().remove(index); 
         } else {
             topCard = deck.get(index);
             if (topCard.getValue().equals("Skip") || topCard.getValue().equals("Draw 2") ||
@@ -59,8 +89,10 @@ public class GameUno extends Game {
                 deck.remove(index);
             }
         }
+        //to check whether topCard has been updated
+        System.out.println("New top card: " + topCard.getValue() + " " + topCard.getSuit());
     }
-
+    */
     public int playCard(Player currentPlayer, int index, String chosenColor) {
         if (index < 0 || index >= currentPlayer.getHand().size()) return -1;
 
