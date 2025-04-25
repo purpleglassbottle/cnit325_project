@@ -11,7 +11,7 @@ import java.util.*;
 
 public abstract class Game implements Deck {
     // Define attributes.
-    ArrayList<Card> deck = new ArrayList();
+    protected ArrayList<Card> deck = new ArrayList();
     
     Card topCard;
     int dealCount;
