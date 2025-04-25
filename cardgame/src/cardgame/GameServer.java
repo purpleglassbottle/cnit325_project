@@ -15,7 +15,7 @@ import java.util.Scanner;
 public class GameServer {    
     // Define players.
     ArrayList<Player> players = new ArrayList();        
-    //Player currentPlayer;
+    //Initiate 2 players
     Player player0 = new Player(0, "Sean");
     Player player1 = new Player(1, "Dumbass");
     
@@ -24,17 +24,15 @@ public class GameServer {
     int turn = 0;
     boolean gameOver = false;
     int ruleChange = 0;
-
-    //networking
-    private ServerSocket serverSocket;
-    private ArrayList<ClientHandler> clients = new ArrayList<>();
-    
     // emily 
     // running game
     private boolean gameStarted = false;
     //setting play direction for reverses
     private boolean clockwise = true; 
 
+    //networking
+    private ServerSocket serverSocket;
+    private ArrayList<ClientHandler> clients = new ArrayList<>(); 
     
     public void startNetwork(int port) {
         try {
@@ -67,7 +65,7 @@ public class GameServer {
                 // launching with 2 players
                 if(!gameStarted && players.size() == 2){
                     startGame(new GameUno());
-                    //sendTurnPrompt();
+                    sendTurnPrompt();
                 }
             }
         } catch (IOException e) {
@@ -109,15 +107,15 @@ public class GameServer {
         game = gameChoice;        
         // Create and shuffle the deck.
         game.buildDeck();
+        System.out.println("Deck built with size: " + game.deck.size());
         game.shuffleCards();
         game.setDealCount();
         // emily
         for (Player p : players){
             game.dealCards(p, game.getDealCount());
         }
-        
         // Create a discard pile.
-        game.discard(null, 0);
+        game.discard(null, 0);//will set a topCard too
 
         gameStarted = true;
         System.out.println("Server is going to broadcast the initial GameState");
@@ -151,7 +149,7 @@ public class GameServer {
     }
 
     // emily
-    // telling a player its their turn
+    // telling a player it's their turn
     private void sendTurnPrompt(){
         clients.get(turn).sendMessage("Your turn");
     }
