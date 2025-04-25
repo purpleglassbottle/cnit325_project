@@ -32,7 +32,8 @@ public class GameClient {
         try {
             String message;
             while ((message = in.readLine()) != null) {
-                System.out.println("Receive the message form the server" + message);
+                System.out.println("Receive the message from server:" + " " + message);
+                
                 if (message.startsWith("HAND:")) {
                     ArrayList<Card> hand = parseHand(message.substring(5));
                     SwingUtilities.invokeLater(() -> gui.loadCardImages(hand));
@@ -40,12 +41,12 @@ public class GameClient {
                 else if (message.startsWith("STATE:")) {
                     String[] parts = message.substring(6).split("\\|");
                     SwingUtilities.invokeLater(() -> 
-                        gui.updateGameState(parts[0], Integer.parseInt(parts[1])));
+                    gui.updateGameState(parts[0], Integer.parseInt(parts[1])));
                 }
             }
         } catch (IOException e) {
             SwingUtilities.invokeLater(() -> 
-                JOptionPane.showMessageDialog(gui, "Disconnected from server"));
+            JOptionPane.showMessageDialog(gui, "Disconnected from server"));
         }
     }
     
