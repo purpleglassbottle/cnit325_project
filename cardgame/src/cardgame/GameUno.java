@@ -8,7 +8,6 @@ package cardgame;
 */
 
 public class GameUno extends Game {
-    private Card topCard;
     
     //xiaotong 4/24
     public void setTopCardColor(String color) {
@@ -45,8 +44,8 @@ public class GameUno extends Game {
                 deck.add(new Card("Reverse", color));
             }
 
-            deck.add(new Card("Wild", null));
-            deck.add(new Card("Draw 4", null));           
+            deck.add(new Card("Wild", "Black"));
+            deck.add(new Card("Draw 4", "Black"));           
         }
     }
 
@@ -61,7 +60,7 @@ public class GameUno extends Game {
         
             // 
             if (topCard.getValue().equals("Wild") || topCard.getValue().equals("Draw 4")) {
-                topCard.setSuit("Black"); 
+                topCard.setSuit("Black");  
             } else if (topCard.getValue().equals("Skip") || topCard.getValue().equals("Draw 2")) {
                 if (!deck.isEmpty()) {
                     discard(null, 0); 
