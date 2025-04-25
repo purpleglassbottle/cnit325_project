@@ -21,7 +21,7 @@ import cardgame.*;
 
 public class ClientHandler implements Runnable 
 {
-    private Socket clientSocket;
+    private Socket s;
     private GameServer server;
     private PrintWriter out;
     private Scanner in;
@@ -36,18 +36,14 @@ public class ClientHandler implements Runnable
     // constructor
     public ClientHandler(Socket s, GameServer server) 
     {
-        this.clientSocket = s;
+        this.s = s;
         this.server = server;
         
         try {
-        // Initialize InputStream and OutputStream
-        this.inStream = clientSocket.getInputStream();
-        this.outStream = clientSocket.getOutputStream();
-
-        // Initialize Scanner and PrintWriter
+        this.inStream = s.getInputStream();
+        this.outStream = s.getOutputStream();
         this.in = new Scanner(inStream);
-        this.out = new PrintWriter(outStream, true);  // Ensure PrintWriter is initialized
-
+        this.out = new PrintWriter(outStream, true); 
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -61,7 +57,7 @@ public class ClientHandler implements Runnable
         return player;
     }
     
-        // send messages to the client
+    // send messages to the client
     public void sendMessage(String message) 
     {
         out.println(message);
@@ -73,8 +69,8 @@ public class ClientHandler implements Runnable
         try 
         {
             //read messages from the player and send messages to the player (client)
-            in = new Scanner(clientSocket.getInputStream());
-            out = new PrintWriter(clientSocket.getOutputStream(), true);
+            in = new Scanner(s.getInputStream());
+            out = new PrintWriter(s.getOutputStream(), true);
 
             // will display if connection is successful
             out.println("Welcome：" + player.getPlayerName());
@@ -128,7 +124,7 @@ public class ClientHandler implements Runnable
         {
             try 
             {
-                clientSocket.close();
+              s.close();
             } catch (IOException e) 
             {
                 e.printStackTrace();
