@@ -36,7 +36,6 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
     Map.entry("Draw 4", "14")
 );
 
-    // xiaotong 4/24
     private final Map<JButton, Integer> buttonIndexMap = new HashMap<>();
     private ArrayList<JButton> currentHandButtons = new ArrayList<JButton>();
 
@@ -48,7 +47,7 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
             setupGUI();
             setVisible(true);
             System.out.println("Connected to the server");
-    
+                               
         }catch(IOException e){            
             System.exit(1);
         }
@@ -93,10 +92,7 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
         for (int i = 0; i < hand.size(); i++) {
             Card card = hand.get(i);
             String filename = getCardFilename(card);
-            addCardButton(filename, card.getValue(), card.getSuit(), i);
-            
-            //for testing
-            
+            addCardButton(filename, card.getValue(), card.getSuit(), i);           
         }
     }
     
@@ -110,6 +106,7 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
 
     //add those images to buttons
     private void addCardButton(String filename, String value, String suit, int index) {
+        //attach the image to the button
         ImageIcon icon = loadScaledCardImage(filename);
         if (icon == null) return;
 
@@ -153,6 +150,11 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
     }
     
     private String getCardFilename(Card card) {
+        // check null 
+    if (card == null || card.getSuit() == null) {
+        System.err.println("INVALID CARD DATA");
+        return "Black-13.png"; // default
+    }
         String number = valueToNumberMap.get(card.getValue());
         String suit = card.getSuit().equals("Wild") ? "Black" : card.getSuit();
         return suit + "-" + number + ".png";
