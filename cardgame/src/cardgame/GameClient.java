@@ -1,57 +1,66 @@
-/*
-    Cassie Kim
-*/
-
 package cardgame;
 
-import java.io.*;
+import java.io.PrintWriter;
+import java.io.IOException; 
 import java.net.Socket;
-import java.util.Scanner;
-import java.util.List;
+
+import java.io.*;
+import java.net.*;
 import java.util.ArrayList;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import javax.swing.SwingUtilities;
+import javax.swing.JOptionPane;
 
 public class GameClient {
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
+    
     private GameUnoGUI gui;
-
-    private final List<Card> hand = new ArrayList<>();
-    private boolean handReady = false;
-
+    public void setGUI(GameUnoGUI gui){
+        this.gui = gui;
+    }
+    
+    //constructor
     public GameClient(String host, int port) throws IOException {
         this.socket = new Socket(host, port);
         this.out = new PrintWriter(socket.getOutputStream(), true);
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        new Thread(this::listenToServer).start();
     }
     
-    public void sendStartGameRequest(int numberOfPlayers) {
-        out.println("START " + numberOfPlayers);
-    }
-    
-    public void setGUI(GameUnoGUI gui) {
-        this.gui = gui;
-    }
-    
-    public List<Card> waitForInitialHand() throws IOException {
-        List<Card> hand = new ArrayList<>();
-        System.out.println("▶ Waiting for cards...");
-        while (true) {
-            String line = in.readLine();
-            System.out.println("▶ Received: " + line);
-            
-            if (line == null) break;
-
-            if (line.equals("HAND_DONE")) break;
-
-            if (line.startsWith("CARD")) {
-            String[] parts = line.split(" ");
-            String value = parts[1];
-            String suit = parts[2].equals("null") ? null : parts[2];
-            hand.add(new Card(value, suit));
+    private void listenToServer() {
+        try {
+            String message;
+            while ((message = in.readLine()) != null) {
+                System.out.println("收到服务器消息" + message);
+                if (message.startsWith("HAND:")) {
+                    ArrayList<Card> hand = parseHand(message.substring(5));
+                    SwingUtilities.invokeLater(() -> gui.loadCardImages(hand));
+                } 
+                else if (message.startsWith("STATE:")) {
+                    String[] parts = message.substring(6).split("\\|");
+                    SwingUtilities.invokeLater(() -> 
+                        gui.updateGameState(parts[0], Integer.parseInt(parts[1])));
+                }
             }
+        } catch (IOException e) {
+            SwingUtilities.invokeLater(() -> 
+                JOptionPane.showMessageDialog(gui, "Disconnected from server"));
+        }
+    }
+    
+    private ArrayList<Card> parseHand(String handStr) {
+        ArrayList<Card> hand = new ArrayList<>();
+        String[] cards = handStr.split(";");
+        for (String card : cards) {
+            System.out.println("Raw card string: " + card); 
+            String[] parts = card.split(",");
+            //for testing
+            if (parts.length < 2) {
+            System.out.println("Parse failed, wrong format: " + card);
+            continue;
+        }
+            hand.add(new Card(parts[1], parts[0])); // value,suit
         }
         return hand;
     }
@@ -62,32 +71,9 @@ public class GameClient {
 //        System.out.println("[Sent to Server] " + message);
     }
 
-    public void sendEndGame() {
+    /*public void sendEndGame() {
         out.println("END_GAME");
     }
-    
-    public void startListening() {
-        new Thread(() -> {
-            try {
-                String line;
-                while ((line = in.readLine()) != null) {
-                    System.out.println("? Received " + line);
-                    
-                    if (line.startsWith("TOP_CARD")) {
-                        String[] parts = line.split(" ");
-                        if (parts.length >= 3 && gui != null) {
-                            String value = parts[1];
-                            String suit = parts[2];
-                            gui.setTopCard(value, suit);  // Display Top Cards on GUI
-                        }
-                    }
-                    
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }).start();
-    }    
 
     public void closeConnection() {
         try {
@@ -96,4 +82,5 @@ public class GameClient {
             e.printStackTrace();
         }
     }
+*/
 }
