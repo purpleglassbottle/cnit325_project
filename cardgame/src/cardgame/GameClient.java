@@ -32,7 +32,7 @@ public class GameClient {
         try {
             String message;
             while ((message = in.readLine()) != null) {
-                System.out.println("收到服务器消息" + message);
+                System.out.println("Receive the message form the server" + message);
                 if (message.startsWith("HAND:")) {
                     ArrayList<Card> hand = parseHand(message.substring(5));
                     SwingUtilities.invokeLater(() -> gui.loadCardImages(hand));
