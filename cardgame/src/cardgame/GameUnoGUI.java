@@ -6,18 +6,18 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import cardgame.GameClient;
-import cardgame.Card;
+import java.util.ArrayList;
 
 public class GameUnoGUI extends JFrame {
     private GameClient client;
     private JPanel handPanel;
+    private JPanel opponentPanel;
     private JComboBox<String> colorSelector;
     private JLabel topCardLabel;
-    private List<Card> hand;
+    private JLabel opponentLabel;
 
 private final Map<String, String> valueToNumberMap = Map.ofEntries(
     Map.entry("1", "1"),
@@ -36,138 +36,134 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
     Map.entry("Draw 4", "14")
 );
 
-    public GameUnoGUI(GameClient client, List<Card> hand) {
-        this.client = client;
-        this.hand = hand;
+    // xiaotong 4/24
+    private final Map<JButton, Integer> buttonIndexMap = new HashMap<>();
+    private ArrayList<JButton> currentHandButtons = new ArrayList<JButton>();
+
+    //constructor
+    public GameUnoGUI() {
+        try{
+            this.client = new GameClient("localhost",12345);
+            this.client.setGUI(this);
+            setupGUI();
+            setVisible(true);
+            System.out.println("Connected to the server");
+    
+        }catch(IOException e){            
+            System.exit(1);
+        }
+    }
+    
+    public void setupGUI()
+    {
         setTitle("UNO Game");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(800, 600);
+        setSize(900, 700);
         setLayout(new BorderLayout());
 
-        topCardLabel = new JLabel("Top Card", SwingConstants.CENTER);
+        topCardLabel = new JLabel("Waiting for the game to start", SwingConstants.CENTER);
         topCardLabel.setFont(new Font("Arial", Font.BOLD, 24));
         add(topCardLabel, BorderLayout.NORTH);
 
-        handPanel = new JPanel();
-        handPanel.setLayout(new FlowLayout());
-        add(handPanel, BorderLayout.CENTER);
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        
+        //opponent player
+        opponentPanel = new JPanel();
+        opponentLabel = new JLabel("opponent's current cards: 0");
+        opponentPanel.add(opponentLabel);
+        centerPanel.add(opponentPanel, BorderLayout.NORTH);
+        //player
+        handPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        centerPanel.add(new JScrollPane(handPanel), BorderLayout.CENTER);
+        
+        add(centerPanel, BorderLayout.CENTER);
 
         JPanel bottomPanel = new JPanel();
         colorSelector = new JComboBox<>(new String[]{"Red", "Blue", "Green", "Yellow"});
-        bottomPanel.add(new JLabel("Choose color (for Wild):"));
+        colorSelector.setEnabled(false); 
+        bottomPanel.add(new JLabel("Choose color:"));
         bottomPanel.add(colorSelector);
-        add(bottomPanel, BorderLayout.SOUTH);
-
-        loadCardImages(hand);
-
-        setVisible(true);
-    }
-
-    private void loadCardImages(List<Card> hand) {
-          int index = 0;
-          
-          for (Card card : hand) {
-              String value = card.getValue();
-              String suit = card.getSuit();
-              String number = valueToNumberMap.get(value);
-              if (number == null) continue;
-              String filename = suit + "-" + number + ".png";
-              addCardButton(filename, value, suit, index++);
-          }
-//        String[] colorSuits = {"Red", "Blue", "Green", "Yellow"};
-//        String[] colorValues = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "Skip", "Reverse", "Draw 2", "Wild", "Draw 4"};
-//        String[] blackValues = {"Wild", "Draw 4"};
-//        int index = 0;
-//
-//        for (String suit : colorSuits) {
-//            for (String value : colorValues) {
-//                
-//                if ((value.equals("Wild") || value.equals("Draw 4")) && !suit.equals("Black")) {
-//                    continue;
-//                }
-//                
-//                if ((suit.equals("Black")) && !(value.equals("Wild") || value.equals("Draw 4"))) {
-//                    continue; 
-//                }
-//                
-//                String number = valueToNumberMap.get(value);
-//                if (number == null) continue;
-//                
-//                String filename = suit + "-" + number + ".png"; 
-//                addCardButton(filename, value, suit, index++);
-//            }
-//        }
-//        
-//        for (int i = 0; i < blackValues.length; i++) {
-//            String value = blackValues[i];
-//            int blackNum = 13 + i;
-//            String filename = "Black-" + blackNum + ".png";
-//            
-//            addCardButton(filename, value, "Black", index++);
-//        }
+        add(bottomPanel, BorderLayout.SOUTH);        
     }
     
-    public void setTopCard(String value, String suit) {
-        String number = valueToNumberMap.get(value);
-        if (number == null) return;
-        String filename = suit + "-" + number + ".png";
-        URL location = getClass().getResource("/cardgame/image/" + filename);
-        if (location != null) {
-            topCardLabel.setIcon(new ImageIcon(location));
+    //display player's handCards on GUI
+    public void loadCardImages(ArrayList<Card> hand) {
+        clearHandPanel();
+        
+        for (int i = 0; i < hand.size(); i++) {
+            Card card = hand.get(i);
+            String filename = getCardFilename(card);
+            addCardButton(filename, card.getValue(), card.getSuit(), i);
+            
+            //for testing
+            
         }
     }
+    
+    private void clearHandPanel() {
+        handPanel.removeAll();
+        buttonIndexMap.clear();
+        currentHandButtons.clear();
+        handPanel.revalidate();
+        handPanel.repaint();
+    }
 
-    public void addCardButton(String filename, String value, String suit, int index) {
+    //add those images to buttons
+    private void addCardButton(String filename, String value, String suit, int index) {
+        ImageIcon icon = loadScaledCardImage(filename);
+        if (icon == null) return;
+
+        JButton cardButton = createCardButton(icon, value, suit, index);
+        handPanel.add(cardButton);
+        buttonIndexMap.put(cardButton, index);
+        currentHandButtons.add(cardButton);
+    }
+    
+    private ImageIcon loadScaledCardImage(String filename) {
         String path = "/cardgame/image/" + filename;
         URL location = getClass().getResource(path);
-
         if (location == null) {
             System.out.println("Image not found: " + path);
-            return;
+            return null;
         }
-
         ImageIcon icon = new ImageIcon(location);
-//        JButton cardButton = new JButton(icon);
-        
         Image scaledImage = icon.getImage().getScaledInstance(80, 120, Image.SCALE_SMOOTH);
-        JButton cardButton = new JButton(new ImageIcon(scaledImage));
-        
-        cardButton.setPreferredSize(new Dimension(80, 120));
-        cardButton.addActionListener(e -> {
-            String selectedColor = (String) colorSelector.getSelectedItem();
-            client.sendPlayCard(index, selectedColor); 
-        });
-
-        handPanel.add(cardButton);
+        return new ImageIcon(scaledImage);
     }
 
-    public static void main(String[] args) {
-        try {
-            GameClient client = new GameClient("localhost", 12345);
-            
-//            if (args.length > 0 && args[0].equals("first")) {
-//                String[] options = {"1", "2", "3", "4"};
-//                String selected = (String) JOptionPane.showInputDialog(null, "Number of Players?", "UNO Setup",
-//                JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
-//                if (selected != null) {
-//                    client.sendStartGameRequest(Integer.parseInt(selected));
-//                }
-//            }
-
-            String[] options = {"1", "2", "3", "4"};
-            String selected = (String) JOptionPane.showInputDialog(null, "Number of Players?", "UNO Setup",
-            JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
-
-            if (selected != null) {
-            client.sendStartGameRequest(Integer.parseInt(selected));
-            }
+    private JButton createCardButton(ImageIcon icon, String value, String suit, int index) {
+        JButton button = new JButton(icon);
+        button.setPreferredSize(new Dimension(80, 120));
         
-            List<Card> hand = client.waitForInitialHand();
-            GameUnoGUI gui = new GameUnoGUI(client, hand);
-            client.setGUI(gui);
-            client.startListening();
-        } catch (IOException ex) {
-            Logger.getLogger(GameUnoGUI.class.getName()).log(Level.SEVERE, null, ex);
+        button.addActionListener(e -> {
+            if (value.equals("Wild") || value.equals("Draw 4")) {
+                colorSelector.setEnabled(true);
+                JOptionPane.showMessageDialog(this, "Please select a color first");
+            } else {
+                client.sendPlayCard(index, null);
+            }
+        });
+        
+        return button;
+    }
+    
+    public void updateGameState(String topCardInfo, int opponentCardCount) {
+        topCardLabel.setText("Top Card: " + topCardInfo);
+        opponentLabel.setText("Opponent's cards: " + opponentCardCount);
+    }
+    
+    private String getCardFilename(Card card) {
+        String number = valueToNumberMap.get(card.getValue());
+        String suit = card.getSuit().equals("Wild") ? "Black" : card.getSuit();
+        return suit + "-" + number + ".png";
+    }
+    
+    public static void main(String[] args) {
+        try{
+            new GameUnoGUI();
+        }catch(Exception e){
+            System.err.println("Failed to start");
+            e.printStackTrace();
         }
     }
 }
