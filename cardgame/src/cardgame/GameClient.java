@@ -22,10 +22,18 @@ public class GameClient {
     
     //constructor
     public GameClient(String host, int port) throws IOException {
-        this.socket = new Socket(host, port);
-        this.out = new PrintWriter(socket.getOutputStream(), true);
-        this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        new Thread(this::listenToServer).start();
+        try {
+            socket = new Socket(host, port);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            out.println("READY_ACK");
+
+            new Thread(this::listenToServer).start();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
     
     private void listenToServer() {
@@ -40,8 +48,52 @@ public class GameClient {
                 } 
                 else if (message.startsWith("STATE:")) {
                     String[] parts = message.substring(6).split("\\|");
-                    SwingUtilities.invokeLater(() -> 
-                    gui.updateGameState(parts[0], Integer.parseInt(parts[1])));
+//                    SwingUtilities.invokeLater(() -> 
+//                    gui.updateGameState(parts[0], Integer.parseInt(parts[1])));
+                    if (parts.length == 2) {
+                        String topCardStr = parts[0];
+                        int oppCardCount = Integer.parseInt(parts[1]);
+                        boolean isMyTurn = topCardStr.contains("*");
+        
+                        String cleanedTopCardStr = topCardStr.replace("*", "");
+
+                        SwingUtilities.invokeLater(() -> {
+                            gui.updateGameState(cleanedTopCardStr, oppCardCount, isMyTurn);
+                            gui.showTurnMessage(false); 
+                        });
+                    } else {
+                        System.out.println("Invalid STATE format received: " + message);
+                    }
+                }
+                else if (message.equals("Your turn")) {
+                    SwingUtilities.invokeLater(() -> {
+                        gui.enableCardClicks(true);
+                        gui.showTurnMessage(true);
+                    });
+                }
+                else if (message.startsWith("play rejected: Not your turn")) {
+                        SwingUtilities.invokeLater(() -> {
+                            gui.enableCardClicks(false);
+                            JOptionPane.showMessageDialog(gui, "It's not your turn!", "Warning", JOptionPane.WARNING_MESSAGE);
+                        });
+                }
+                else if (message.startsWith("Game already started")) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(gui, "The game has already started. You cannot join now.", "Game Full", JOptionPane.ERROR_MESSAGE);
+                        try {
+                            socket.close();
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }        
+                        System.exit(0); 
+                    });
+                }
+                else if (message.startsWith("END_GAME")) {
+                    String reason = message.substring(9); 
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(gui, reason, "Game Over", JOptionPane.INFORMATION_MESSAGE);
+                        System.exit(0);
+                    });
                 }
             }
         } catch (IOException e) {

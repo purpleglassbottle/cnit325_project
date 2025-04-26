@@ -12,6 +12,7 @@ import java.util.*;
 public abstract class Game implements Deck {
     // Define attributes.
     protected ArrayList<Card> deck = new ArrayList();
+    public ArrayList<Card> discardPile = new ArrayList<>();
     
     Card topCard;
     int dealCount;
@@ -42,7 +43,16 @@ public abstract class Game implements Deck {
     
     // Add to the discard pile. Overwritten by children.
     public void discard(Player currentPlayer, int index) {
-        
+        if (currentPlayer == null) {
+            do {
+                topCard = deck.remove(0);
+            } while (topCard.getValue().equals("Wild") || topCard.getValue().equals("Draw 4"));
+            discardPile.add(topCard);
+            return;
+        }
+
+        topCard = currentPlayer.getHand().remove(index);
+        discardPile.add(topCard);        
     } // End public void discard.
     
     // Play a card. Overwritten by children.

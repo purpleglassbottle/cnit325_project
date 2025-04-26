@@ -51,12 +51,15 @@ public class GameUno extends Game {
 
     //xiaotong
     //updated on 4/24
-    public void discard(Player currentPlayer, int index) {
+    // Cassie
+    // Fixed some logics
+    public void discard(Player currentPlayer, Card playedCard) {
         if (currentPlayer != null) {
-            topCard = currentPlayer.getHand().remove(index); 
+            currentPlayer.getHand().remove(playedCard);
+            topCard = playedCard;
         } else {
-            topCard = new Card(deck.get(index).getValue(), deck.get(index).getSuit()); 
-            deck.remove(index);
+            topCard = new Card(deck.get(0).getValue(), deck.get(0).getSuit()); 
+            deck.remove(0);
         
             // 
             if (topCard.getValue().equals("Wild") || topCard.getValue().equals("Draw 4")) {
@@ -70,8 +73,6 @@ public class GameUno extends Game {
         //to check whether topCard has been updated
         System.out.println("New top card: " + topCard.getValue() + " " + topCard.getSuit());
     }
-    
-    
     
     //deleted by xiaotong for now
     /*public void discard(Player currentPlayer, int index) {
@@ -96,27 +97,26 @@ public class GameUno extends Game {
         if (index < 0 || index >= currentPlayer.getHand().size()) return -1;
 
         Card play = currentPlayer.getHand().get(index);
+        String playedValue = play.getValue();
+        String playedSuit = play.getSuit();   
 
-        if (play.getValue().equals("Wild") || play.getValue().equals("Draw 4") ||
-            play.getValue().equals(topCard.getValue()) ||
-            (play.getSuit() != null && play.getSuit().equals(topCard.getSuit()))) {
+        if (playedValue.equals(topCard.getValue()) || 
+            (playedSuit != null && playedSuit.equals(topCard.getSuit())) ||
+            playedValue.equals("Wild") || playedValue.equals("Draw 4")) {
 
-            this.discard(currentPlayer, index);
+            if (playedValue.equals("Wild") || playedValue.equals("Draw 4")) {
+                if (chosenColor != null) {
+                    play.setSuit(colorCodeToWord(chosenColor)); 
+                }
+            }
 
-            switch (topCard.getValue()) {
+            this.discard(currentPlayer, play);  
+
+            switch (playedValue) {
                 case "Skip": return 1;
                 case "Draw 2": return 2;
                 case "Reverse": return 3;
-                case "Wild":
-                    if (chosenColor != null) {
-                        topCard.setSuit(colorCodeToWord(chosenColor));
-                    }
-                    return 0;
-                case "Draw 4":
-                    if (chosenColor != null) {
-                        topCard.setSuit(colorCodeToWord(chosenColor));
-                    }
-                    return 4;
+                case "Draw 4": return 4;
                 default: return 0;
             }
         }

@@ -54,26 +54,27 @@ public class ClientHandler implements Runnable
     }
     
     public Player getPlayer(){
-        return player;
+        return this.player;
     }
     
     // send messages to the client
     public void sendMessage(String message) 
     {
+        System.out.println("[Server send] " + message);
         out.println(message);
     }
     
     //Override
     public void run() 
     {
-        try 
-        {
+//        try 
+//        {
             //read messages from the player and send messages to the player (client)
-            in = new Scanner(s.getInputStream());
-            out = new PrintWriter(s.getOutputStream(), true);
-
+//            in = new Scanner(s.getInputStream());
+//            out = new PrintWriter(s.getOutputStream(), true);
+            server.registerPlayer(this);
             // will display if connection is successful
-            out.println("Welcome：" + player.getPlayerName());
+//            out.println("Welcome：" + player.getPlayerName());
             
             while (in.hasNextLine()) 
             {
@@ -84,6 +85,12 @@ public class ClientHandler implements Runnable
                 // handle client message
                 if(clientMessage.isEmpty())
                     continue;
+                
+                if (clientMessage.equals("READY_ACK")) 
+                {
+                    server.playerReady(); // server acknowledges this client is ready
+                    continue;
+                }    
                 
                 if (clientMessage.equals("END_GAME")) 
                 {
@@ -117,21 +124,23 @@ public class ClientHandler implements Runnable
                     sendMessage("Unrecognized command: " + clientMessage);
                 }
             }
-        } catch (IOException e) 
-        {
-            e.printStackTrace();
-        } finally 
-        {
-            try 
-            {
-              s.close();
-            } catch (IOException e) 
-            {
-                e.printStackTrace();
-            }
-            // tell server of disconnect
-            server.removeClient(this);
         } 
-    }
+//        catch (IOException e) 
+//        {
+//            e.printStackTrace();
+//        } 
+//        finally 
+//        {
+//            try 
+//            {
+//              s.close();
+//            } catch (IOException e) 
+//            {
+//                e.printStackTrace();
+//            }
+//            // tell server of disconnect
+////            server.removeClient(this);
+//        } 
+//    }
 }
 

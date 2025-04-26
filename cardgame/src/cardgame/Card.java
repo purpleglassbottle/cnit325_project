@@ -6,6 +6,8 @@ package cardgame;
 * @author seanm
 */
 
+import java.util.Objects;
+
 public class Card {
     // Define attributes.
     String value, suit;
@@ -32,5 +34,18 @@ public class Card {
     
     public void setSuit(String input) {
         this.suit = input;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Card card = (Card) obj;
+        return value.equals(card.value) && suit.equals(card.suit);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(value, suit);
     }
 }
