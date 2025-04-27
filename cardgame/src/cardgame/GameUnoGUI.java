@@ -20,7 +20,11 @@ public class GameUnoGUI extends JFrame {
     private JLabel topCardLabel;
     private JLabel opponentLabel;
     private JLabel turnLabel;
+    private JButton settingsButton;
     private Locale selectedLocale = Locale.ENGLISH;
+    private String topCardInfo = "Waiting..."; 
+    private int opponentCardCount = 0; 
+    private boolean isMyTurn = false;
 
 private final Map<String, String> valueToNumberMap = Map.ofEntries(
     Map.entry("1", "1"),
@@ -74,6 +78,8 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
             setupGUI();
             setVisible(true);
             System.out.println("Connected to the server");
+            
+            this.client.sendMessage("READY");
                                
         }catch(IOException e){            
             System.exit(1);
@@ -123,7 +129,34 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
         colorSelector.setEnabled(false); 
 //        bottomPanel.add(new JLabel("Choose color:"));
 //        bottomPanel.add(colorSelector);
-        add(bottomPanel, BorderLayout.SOUTH);        
+        add(bottomPanel, BorderLayout.SOUTH);      
+        
+        settingsButton = new JButton(getLocalizedText("Settings"));
+        bottomPanel.add(settingsButton);
+        
+        settingsButton.addActionListener(e -> {
+            String[] languages = {"English", "한국어", "中文"};
+            String selectedLanguage = (String) JOptionPane.showInputDialog(
+                    this,
+                    getLocalizedText("Select your language:"),
+                    getLocalizedText("Settings"),
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    languages,
+                    languages[0]
+            );
+
+            if (selectedLanguage != null) {
+                if (selectedLanguage.equals("한국어")) {
+                    selectedLocale = Locale.KOREAN;
+                } else if (selectedLanguage.equals("中文")) {
+                    selectedLocale = Locale.CHINESE;
+                } else {
+                    selectedLocale = Locale.ENGLISH;
+                }
+                updateTexts();
+            }
+        });
     }
     
     //display player's handCards on GUI
@@ -236,6 +269,10 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
     }
     
     public void updateGameState(String topCardInfo, int opponentCardCount, boolean isMyTurn) {
+        this.topCardInfo = topCardInfo;
+        this.opponentCardCount = opponentCardCount;
+        this.isMyTurn = isMyTurn;
+        
         topCardLabel.setText(getLocalizedText("Top Card: ") + topCardInfo);
         opponentLabel.setText(getLocalizedText("Opponent's cards: ") + opponentCardCount);
         showTurnMessage(isMyTurn);
@@ -283,6 +320,7 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
                 case "Blue" -> "파랑";
                 case "Green" -> "초록";
                 case "Yellow" -> "노랑";    
+                case "Settings" -> "설정";
                 default -> text;
             };
             case "zh" -> switch (text) {
@@ -306,10 +344,25 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
                 case "Blue" -> "蓝色";
                 case "Green" -> "绿色";
                 case "Yellow" -> "黄色";   
+                case "Settings" -> "设置";
                 default -> text;
             };
             default -> text;
         };
+    }
+    
+    private void updateTexts() {
+        topCardLabel.setText(getLocalizedText("Top Card: ") + topCardInfo);
+        opponentLabel.setText(getLocalizedText("Opponent's cards: ") + opponentCardCount);
+        showTurnMessage(isMyTurn);
+
+        colorSelector.removeAllItems();
+        colorSelector.addItem(getLocalizedText("Red"));
+        colorSelector.addItem(getLocalizedText("Blue"));
+        colorSelector.addItem(getLocalizedText("Green"));
+        colorSelector.addItem(getLocalizedText("Yellow"));
+
+        settingsButton.setText(getLocalizedText("Settings"));
     }
     
     public static void main(String[] args) {

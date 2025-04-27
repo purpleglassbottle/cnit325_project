@@ -123,6 +123,15 @@ public class GameClient {
         out.println(message);
 //        System.out.println("[Sent to Server] " + message);
     }
+    
+    public void sendMessage(String message) {
+        try {
+            out.println(message);
+        } catch (Exception e) {
+            System.err.println("Failed to send message: " + message);
+            e.printStackTrace();
+        }
+    }
 
     /*public void sendEndGame() {
         out.println("END_GAME");
