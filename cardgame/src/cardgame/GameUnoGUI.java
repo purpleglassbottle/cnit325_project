@@ -263,6 +263,8 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
     private String getLocalizedText(String text) {
         return switch (selectedLocale.getLanguage()) {
             case "ko" -> switch (text) {
+                case "Waiting for the game to start" -> "게임 시작을 기다리는 중";
+                case "opponent's current cards: 0" -> "상대방의 현재 카드 수: 0";
                 case "Top Card: Waiting..." -> "최상단 카드: 대기 중...";
                 case "Waiting for turn info" -> "턴 정보 대기 중";
                 case "Waiting for turn..." -> "턴 대기 중...";
@@ -284,6 +286,8 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
                 default -> text;
             };
             case "zh" -> switch (text) {
+                case "Waiting for the game to start" -> "等待游戏开始";
+                case "opponent's current cards: 0" -> "对手当前手牌数：0";
                 case "Top Card: Waiting..." -> "顶牌: 等待中...";
                 case "Waiting for turn info" -> "等待回合信息";
                 case "Waiting for turn..." -> "等待回合...";
