@@ -67,10 +67,24 @@ public class GameClient {
                 }
                 else if (message.equals("Your turn")) {
                     SwingUtilities.invokeLater(() -> {
+                        gui.setMyTurn(true);
                         gui.enableCardClicks(true);
                         gui.showTurnMessage(true);
                     });
                 }
+                else if (message.startsWith("TIMER_START:")) {
+                    int seconds = Integer.parseInt(message.substring(12));
+                    SwingUtilities.invokeLater(() -> {
+                        if (gui.isMyTurn()) { 
+                            gui.startCountdown(seconds);
+                        }
+                    });
+//                    gui.setMyTurn(true);
+//                    SwingUtilities.invokeLater(() -> {
+//                        gui.enableCardClicks(true);
+//                        gui.showTurnMessage(true);
+//                    });
+                }                
                 else if (message.startsWith("play rejected: Not your turn")) {
                         SwingUtilities.invokeLater(() -> {
                             gui.enableCardClicks(false);

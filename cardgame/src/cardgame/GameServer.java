@@ -12,6 +12,8 @@ import java.io.*;
 import java.net.*;
 import javax.swing.*;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class GameServer {    
     // Define players.
@@ -39,6 +41,9 @@ public class GameServer {
     
     // Localization
     private Locale selectedLocale = Locale.ENGLISH;
+    
+    // Timer
+    private Timer turnTimer;
     
     public void startNetwork(int port) {
 
@@ -275,9 +280,14 @@ public class GameServer {
             sendTurnPrompt();
             } else {
             clients.get(turn).sendMessage("Your turn");
+            clients.get(turn).sendMessage("TIMER_START:10");
+            startTurnTimer(currentPlayer);
             }
+            
         } else {
         clients.get(turn).sendMessage("Your turn");
+        clients.get(turn).sendMessage("TIMER_START:10");
+        startTurnTimer(currentPlayer);
         }
 
 //        for (ClientHandler client : clients) {
@@ -287,6 +297,49 @@ public class GameServer {
 //                break;
 //            }
 //        }
+    }
+    
+    // Cassie
+    private void startTurnTimer(Player player) {
+        if (turnTimer != null) {
+            turnTimer.cancel(); 
+        }
+
+        turnTimer = new Timer();
+        turnTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("[Server] " + player.getPlayerName() + " ran out of time!");
+                
+                int playerIdx = players.indexOf(player);
+
+                if (playerIdx == -1) {
+                    System.out.println("[Server] Player no longer exists.");
+                    return;
+                }            
+                
+                ClientHandler clientHandler = clients.get(playerIdx);
+
+                if (hasPlayableCard(player)) {
+                    for (int i = 0; i < player.getHand().size(); i++) {
+                        Card c = player.getHand().get(i);
+                        Card top = game.getTopCard();
+                        if (c.getSuit().equals(top.getSuit()) || c.getValue().equals(top.getValue()) || 
+                            c.getValue().equals("Wild") || c.getValue().equals("Draw 4")) {
+                            System.out.println("[Server] Auto-playing card for " + player.getPlayerName());
+                            processPlay(clients.get(turn), i, null);
+                            return;
+                        }
+                    }
+                } else {
+                    game.dealCards(player, 1);
+                    broadcast("[Server] " + player.getPlayerName() + " drew a card (timeout).");
+                    broadcastGameState();
+                    changeTurn();
+                    sendTurnPrompt();
+                }
+            }
+        }, 10000); 
     }
     
     // Cassie

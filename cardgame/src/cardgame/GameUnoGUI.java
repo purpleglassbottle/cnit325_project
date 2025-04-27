@@ -11,6 +11,8 @@ import java.util.logging.Logger;
 import cardgame.GameClient;
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class GameUnoGUI extends JFrame {
     private GameClient client;
@@ -25,6 +27,8 @@ public class GameUnoGUI extends JFrame {
     private String topCardInfo = "Waiting..."; 
     private int opponentCardCount = 0; 
     private boolean isMyTurn = false;
+    private Timer countdownTimer;
+    private JLabel timerLabel;    
 
 private final Map<String, String> valueToNumberMap = Map.ofEntries(
     Map.entry("1", "1"),
@@ -98,11 +102,15 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
         
         turnLabel = new JLabel(getLocalizedText("Waiting for turn info"), SwingConstants.CENTER);
         turnLabel.setFont(new Font("Noto Sans CJK", Font.BOLD, 18));
+
+        timerLabel = new JLabel(getLocalizedText("Time left: "), SwingConstants.CENTER);
+        timerLabel.setFont(new Font("Noto Sans CJK", Font.BOLD, 16));
         
-        JPanel titlePanel = new JPanel(new GridLayout(2, 1));
+        JPanel titlePanel = new JPanel(new GridLayout(3, 1));
+        
         titlePanel.add(topCardLabel);
         titlePanel.add(turnLabel);
-        
+        titlePanel.add(timerLabel);
         add(titlePanel, BorderLayout.NORTH);
 
         JPanel centerPanel = new JPanel(new BorderLayout());
@@ -133,6 +141,8 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
         
         settingsButton = new JButton(getLocalizedText("Settings"));
         bottomPanel.add(settingsButton);
+        
+        
         
         settingsButton.addActionListener(e -> {
             String[] languages = {"English", "한국어", "中文"};
@@ -216,34 +226,36 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
         JButton button = new JButton(icon);
         button.setPreferredSize(new Dimension(80, 120));
         
-    button.addActionListener(e -> {
-        if (value.equals("Wild") || value.equals("Draw 4")) {
-            String[] colors = {
-                getLocalizedText("Red"),
-                getLocalizedText("Blue"),
-                getLocalizedText("Green"),
-                getLocalizedText("Yellow")
-            };
-            String selectedColor = (String) JOptionPane.showInputDialog(
-                    this,
-                    getLocalizedText("Choose a color:"),
-                    getLocalizedText("Wild Card Color Selection"),
-                    JOptionPane.PLAIN_MESSAGE,
-                    null,
-                    colors,
-                    colors[0]
-            );
+        button.addActionListener(e -> {
+            if (value.equals("Wild") || value.equals("Draw 4")) {
+                String[] colors = {
+                    getLocalizedText("Red"),
+                    getLocalizedText("Blue"),
+                    getLocalizedText("Green"),
+                    getLocalizedText("Yellow")
+                };
+                String selectedColor = (String) JOptionPane.showInputDialog(
+                        this,
+                        getLocalizedText("Choose a color:"),
+                        getLocalizedText("Wild Card Color Selection"),
+                        JOptionPane.PLAIN_MESSAGE,
+                        null,
+                        colors,
+                        colors[0]
+                );
 
-            if (selectedColor == null) {
-                JOptionPane.showMessageDialog(this, "No color selected. Canceling play.");
-                return;
+                if (selectedColor == null) {
+                    JOptionPane.showMessageDialog(this, "No color selected. Canceling play.");
+                    return;
+                }
+
+                String colorCode = colorWordToCode(selectedColor);
+                client.sendPlayCard(index, colorCode);
+                stopCountdown();
+            } else {
+                client.sendPlayCard(index, null);
+                stopCountdown();
             }
-
-            String colorCode = colorWordToCode(selectedColor);
-            client.sendPlayCard(index, colorCode);
-        } else {
-            client.sendPlayCard(index, null);
-        }
 
         handPanel.remove(button);
         currentHandButtons.remove(button);
@@ -255,6 +267,14 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
     });
         
         return button;
+    }
+    
+    public boolean isMyTurn() {
+        return isMyTurn;
+    }
+    
+    public void setMyTurn(boolean myTurn) {
+        this.isMyTurn = myTurn;
     }
     
     public void enableCardClicks(boolean enable) {
@@ -297,6 +317,37 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
         return suit + "-" + number + ".png";
     }
     
+    public void startCountdown(int seconds) {
+        if (countdownTimer != null) {
+            countdownTimer.cancel();
+        }
+
+        countdownTimer = new Timer();
+        timerLabel.setText(getLocalizedText("Time left: ") + seconds + getLocalizedText("s"));
+
+        countdownTimer.scheduleAtFixedRate(new TimerTask() {
+            int timeLeft = seconds;
+
+            @Override
+            public void run() {
+                timeLeft--;
+                SwingUtilities.invokeLater(() -> timerLabel.setText(getLocalizedText("Time left: ") + timeLeft + getLocalizedText("s")));
+
+                if (timeLeft <= 0) {
+                    countdownTimer.cancel();
+                }
+            }
+        }, 1000, 1000);
+    }
+    
+    public void stopCountdown() {
+        if (countdownTimer != null) {
+            countdownTimer.cancel();
+            countdownTimer = null;
+        }
+        SwingUtilities.invokeLater(() -> timerLabel.setText("")); 
+    }
+    
     private String getLocalizedText(String text) {
         return switch (selectedLocale.getLanguage()) {
             case "ko" -> switch (text) {
@@ -321,6 +372,8 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
                 case "Green" -> "초록";
                 case "Yellow" -> "노랑";    
                 case "Settings" -> "설정";
+                case "Time left: " -> "남은 시간:";
+                case "s" -> "초";
                 default -> text;
             };
             case "zh" -> switch (text) {
@@ -345,6 +398,8 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
                 case "Green" -> "绿色";
                 case "Yellow" -> "黄色";   
                 case "Settings" -> "设置";
+                case "Time left: " -> "剩余时间: ";
+                case "s" -> "秒";
                 default -> text;
             };
             default -> text;
