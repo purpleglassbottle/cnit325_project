@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
+
 
 public class GameUnoGUI extends JFrame {
     private GameClient client;
@@ -77,13 +79,45 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
         }
         
         try{
-            this.client = new GameClient("localhost",12345);
+            Object[] opts = { getLocalizedText("New Game"),
+                  getLocalizedText("Continue") };
+
+            int choice = JOptionPane.showOptionDialog(null, getLocalizedText("Start a new game or continue?"), "UNO"
+                    , JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, opts, opts[0]);
+
+            boolean load = (choice == 1);
+
+            String gameId;
+            int playerId;
+
+            if (load) {
+                gameId = JOptionPane.showInputDialog(null, getLocalizedText("Enter game ID:"));
+                if (gameId == null || gameId.isBlank()){
+                    System.exit(0);
+                }
+
+                String s = JOptionPane.showInputDialog(null, getLocalizedText("Which player number are you? (0,1,…)"));
+                if (s == null) {
+                    System.exit(0);
+                }
+                playerId = Integer.parseInt(s.trim());
+            } else {
+                gameId = UUID.randomUUID().toString().substring(0, 6);
+                JOptionPane.showMessageDialog(null, getLocalizedText("Your game ID is: ") + gameId);
+                playerId = 0;                         // first joiner
+            }
+
+            this.client = new GameClient("localhost", 12345, load, gameId, playerId);
+
+//            this.client = new GameClient("localhost",12345);
             this.client.setGUI(this);
             setupGUI();
             setVisible(true);
             System.out.println("Connected to the server");
             
-            this.client.sendMessage("READY");
+//            this.client.sendMessage("READY");
+//            this.client.sendMessage("READY_ACK");
+
                                
         }catch(IOException e){            
             System.exit(1);

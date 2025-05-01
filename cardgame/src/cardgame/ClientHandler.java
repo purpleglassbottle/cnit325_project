@@ -72,21 +72,36 @@ public class ClientHandler implements Runnable
             //read messages from the player and send messages to the player (client)
 //            in = new Scanner(s.getInputStream());
 //            out = new PrintWriter(s.getOutputStream(), true);
-            server.registerPlayer(this);
+//            server.registerPlayer(this);
             // will display if connection is successful
 //            out.println("Welcome：" + player.getPlayerName());
             
             while (in.hasNextLine()) 
             {
+
                 // emily
                 // added trim
                 String clientMessage = in.nextLine().trim();
                 System.out.println("Received from client: " + clientMessage);
                 // handle client message
+                if (clientMessage.startsWith("INIT_GAME")) {            // INIT_GAME NEW|LOAD <id>
+                    String[] p = clientMessage.split(" ");
+                    server.configureGame(p[2], p[1].equals("LOAD"));
+                    continue;
+                }
+
+                if (clientMessage.startsWith("HELLO ")) {               // HELLO <playerId>
+                    int id = Integer.parseInt(clientMessage.substring(6));
+                    if (!server.registerPlayer(this, id))
+                        sendMessage("ID_TAKEN");
+                    continue;
+                }
+
+                
                 if(clientMessage.isEmpty())
                     continue;
                 
-                if (clientMessage.equals("READY_ACK")) 
+                if (clientMessage.equals("READY") || clientMessage.equals("READY_ACK"))
                 {
                     server.playerReady(); // server acknowledges this client is ready
                     continue;

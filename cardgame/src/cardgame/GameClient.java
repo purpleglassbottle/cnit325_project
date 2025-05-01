@@ -21,12 +21,36 @@ public class GameClient {
     }
     
     //constructor
-    public GameClient(String host, int port) throws IOException {
+    // temp 
+//    public GameClient(String host, int port) throws IOException {
+//        try {
+//            socket = new Socket(host, port);
+//            out = new PrintWriter(socket.getOutputStream(), true);
+//            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+//
+//            out.println("READY_ACK");
+//
+//            new Thread(this::listenToServer).start();
+//
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
+    
+    // Legacy Connections
+    public GameClient(String h, int p) throws IOException {
+        this(h, p, false, "new", 0);
+    }
+
+    // New dynmaic
+    public GameClient(String host, int port, boolean load, String gameId, int playerId) throws IOException {
         try {
             socket = new Socket(host, port);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
+       
+            out.println("INIT_GAME " + (load ? "LOAD " : "NEW ") + gameId);
+            out.println("HELLO " + playerId);
             out.println("READY_ACK");
 
             new Thread(this::listenToServer).start();
@@ -34,8 +58,8 @@ public class GameClient {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
-    
     private void listenToServer() {
         try {
             String message;

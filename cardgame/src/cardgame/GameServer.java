@@ -14,8 +14,18 @@ import javax.swing.*;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
+import com.google.gson.Gson;
+import java.util.Optional;
+
 
 public class GameServer {    
+    //added s3
+    private final SaveGame storage = new SaveGame("cnit325project", "us-east-1");
+    
+//    private final String gameId = "room1";
+    // emily
+    private String gameId; // Dynamic
+    
     // Define players.
     ArrayList<Player> players = new ArrayList();        
     //Initiate 2 players
@@ -69,6 +79,15 @@ public class GameServer {
 //        } else {
 //            selectedLocale = Locale.ENGLISH;
 //        }
+        // more s3 - restore a saved game
+        Optional<String> maybeJson = storage.load(gameId);
+        
+        if(maybeJson.isPresent()){
+            GameState restored = new Gson().fromJson(maybeJson.get(), GameState.class);
+            restoreFrom(restored);
+            System.out.println("[SERVER] restored game with s3");
+        }
+        
         
         String[] options = {"2", "3", "4"};
         String input = (String) JOptionPane.showInputDialog(
@@ -96,7 +115,7 @@ public class GameServer {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 
-                if (gameStarted || players.size() >= expectedPlayers) {
+                if (gameStarted || clients.size() >= expectedPlayers) {
                     PrintWriter tempOut = new PrintWriter(clientSocket.getOutputStream(), true);
                     tempOut.println("Game already started. You can't join now.");
                     
@@ -138,30 +157,76 @@ public class GameServer {
         }
     }
     
-    public synchronized void registerPlayer(ClientHandler handler) {
-        Player p = new Player(players.size(), "Player" + players.size());
-        handler.setPlayer(p);
-        players.add(p); 
-
-        broadcast("[Server] " + p.getPlayerName() + " joined");
+    
+    // emily
+//    public synchronized void registerPlayer(ClientHandler handler) {
+//        Player p = new Player(players.size(), "Player" + players.size());
+//        handler.setPlayer(p);
+//        players.add(p); 
+//
+//        broadcast("[Server] " + p.getPlayerName() + " joined");
 
 //        if (!gameStarted && players.size() == expectedPlayers) {
 //            startGame(new GameUno());
 //            sendTurnPrompt();
 //        }
-    }    
+//    }    
+
+    public synchronized boolean registerPlayer(ClientHandler h, int id) {
+        if (id < 0) return false;                       // sanity
+        for (ClientHandler c : clients)                 // slot taken?
+            if (c.getPlayer() != null && c.getPlayer().getPlayerId() == id)
+                return false;
+
+        Player p;
+        if (id < players.size()) {                     // loaded game → reuse
+            p = players.get(id);
+        } else {                                       // fresh game → create
+            p = new Player(id, "Player" + id);
+            while (players.size() <= id) players.add(null);
+            players.set(id, p);
+        }
+
+        h.setPlayer(p);
+        broadcast("[Server] " + p.getPlayerName() + " joined / re-joined");
+        return true;
+    }
+
     
     // Called when the client sends a READY signal
     public synchronized void playerReady() {
         readyPlayers++;
         System.out.println("Ready players: " + readyPlayers + "/" + expectedPlayers);
 
+//        if (!gameStarted && readyPlayers == expectedPlayers) {
+//            startGame(new GameUno());
+//            sendTurnPrompt();
+//        }
         if (!gameStarted && readyPlayers == expectedPlayers) {
-            startGame(new GameUno());
-            sendTurnPrompt();
+            if (game == null) {                  // fresh lobby
+                startGame(new GameUno());
+            } else {                             // restored game
+                gameStarted = true;
+                broadcastGameState();
+                sendTurnPrompt();
+            }
         }
+
     }
     
+    public synchronized boolean configureGame(String id, boolean loadExisting) {
+        if (gameId != null) return false;          // already set
+        gameId = id;
+        if (loadExisting) {
+            storage.load(gameId).ifPresent(json -> {
+                GameState st = new Gson().fromJson(json, GameState.class);
+                restoreFrom(st);
+                System.out.println("[SERVER] restored game " + gameId);
+            });
+        }
+        return true;
+    }
+
     public void startGame(Game gameChoice) {
         // emily 
         //clear pre-existing players if there are any
@@ -396,6 +461,10 @@ public class GameServer {
         
         broadcastGameState();   
         sendTurnPrompt();
+        
+        // save after every move is done
+        GameState snapshot = captureCurrentState();
+        storage.save(gameId, new Gson().toJson(snapshot));
     }
     
     // emily
@@ -480,8 +549,49 @@ public class GameServer {
     public void endGame(String reason) {                   
         broadcast("[Server] Game over: " + reason);        
         // Cassie
-        broadcast("END_GAME " + reason);
+        broadcast("END_GAME " + reason + " (ID: " + gameId + ')');
+//        broadcast("END_GAME " + reason);
         gameStarted = false;                                
+    }
+    
+    //get the state and restore it 
+    private GameState captureCurrentState() {
+        List<PlayerState> ps = new ArrayList<>();
+        for (Player p : players) {
+            // make a copy of the hand
+            ps.add(new PlayerState(p.getPlayerId(),new ArrayList<>(p.getHand())));
+        }
+        return new GameState(
+            ps, new ArrayList<>(game.deck), new ArrayList<>(game.discardPile), turn, clockwise);
+    }
+
+    private void restoreFrom(GameState st) {
+        // restore players
+        players.clear();
+        for (PlayerState ps : st.players) {
+            Player p = new Player(ps.playerId, "Player" + ps.playerId);
+            p.getHand().addAll(ps.hand);
+            players.add(p);
+        }
+
+        // restore game internals
+        game = new GameUno();
+        game.deck.clear();
+        game.deck.addAll(st.deck);
+        game.discardPile.clear();
+        game.discardPile.addAll(st.discardPile);
+        
+        if (!game.discardPile.isEmpty()) {
+            game.setTopCard(game.discardPile.get(game.discardPile.size() - 1));
+        }
+
+
+        turn = st.turn;
+        clockwise = st.clockwise;
+        gameStarted = false;          // let players re-join first
+        readyPlayers = 0;             // they’ll send READY again
+        expectedPlayers = players.size();
+
     }
     
     //playGameUno() deleted
