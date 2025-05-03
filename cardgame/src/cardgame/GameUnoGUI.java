@@ -1,14 +1,21 @@
 package cardgame;
 
+/*
+* Cassie Kim
+* Xiaotong Luo
+* Sean Maloney
+* Emily Zhang
+*/
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import cardgame.GameClient;
+//import java.util.logging.Level;
+//import java.util.logging.Logger;
+//import cardgame.GameClient;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Timer;

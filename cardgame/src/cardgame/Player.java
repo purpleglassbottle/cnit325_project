@@ -9,7 +9,7 @@ package cardgame;
 
 import java.util.*;
 
-public class Player {
+public abstract class Player {
     // Define attributes.
     ArrayList<Card> hand = new ArrayList<Card>(); 
     

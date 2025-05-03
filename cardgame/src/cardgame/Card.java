@@ -1,14 +1,13 @@
 package cardgame;
 
 /*
+* Cassie Kim
+* Xiaotong Luo
 * Sean Maloney
-* Friday 1:30pm
-* @author seanm
+* Emily Zhang
 */
 
-import java.util.Objects;
-
-public class Card {
+public abstract class Card {
     // Define attributes.
     String value, suit;
     

@@ -1,25 +1,32 @@
 package cardgame;
 
+/*
+* Cassie Kim
+* Xiaotong Luo
+* Sean Maloney
+* Emily Zhang
+*/
+
 import java.io.PrintWriter;
 import java.io.IOException; 
 import java.net.Socket;
-
 import java.io.*;
-import java.net.*;
+//import java.net.*;
 import java.util.ArrayList;
-import java.util.Random;
-import java.util.HashMap;
+//import java.util.Random;
+//import java.util.HashMap;
 import java.util.Map;
 import javax.swing.SwingUtilities;
 import javax.swing.JOptionPane;
-import javax.swing.Timer;
+//import javax.swing.Timer;
 
 public class GameClient {
+    // Define attributes.
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
-    
     private GameUnoGUI gui;
+    
     public void setGUI(GameUnoGUI gui){
         this.gui = gui;
     }
@@ -182,7 +189,7 @@ public class GameClient {
 
             String value = numberToValueMap.getOrDefault(valueCode, valueCode);
             
-            hand.add(new Card(value, suit)); // value,suit
+            hand.add(new CardUno(value, suit)); // value,suit
         }
         return hand;
     }

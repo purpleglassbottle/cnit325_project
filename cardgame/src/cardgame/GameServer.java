@@ -189,7 +189,7 @@ public class GameServer {
         if (id < players.size() && players.get(id) != null) {                     // loaded game → reuse
             p = players.get(id);
         } else {                                       // fresh game → create
-            p = new Player(id, "Player" + id);
+            p = new PlayerUno(id, "Player" + id);
             while (players.size() <= id) players.add(null);
             players.set(id, p);
         }
@@ -596,7 +596,7 @@ public class GameServer {
         // restore players
         players.clear();
         for (PlayerState ps : st.players) {
-            Player p = new Player(ps.playerId, "Player" + ps.playerId);
+            Player p = new PlayerUno(ps.playerId, "Player" + ps.playerId);
             p.getHand().addAll(ps.hand);
             players.add(p);
         }

@@ -32,22 +32,22 @@ public class GameUno extends Game {
             }
 
             for (int j = 0; j <= 1; j++) {
-                deck.add(new Card("1", color));
-                deck.add(new Card("2", color));
-                deck.add(new Card("3", color));
-                deck.add(new Card("4", color));
-                deck.add(new Card("5", color));
-                deck.add(new Card("6", color));
-                deck.add(new Card("7", color));
-                deck.add(new Card("8", color));
-                deck.add(new Card("9", color));
-                deck.add(new Card("Skip", color));
-                deck.add(new Card("Draw 2", color));
-                deck.add(new Card("Reverse", color));
+                deck.add(new CardUno("1", color));
+                deck.add(new CardUno("2", color));
+                deck.add(new CardUno("3", color));
+                deck.add(new CardUno("4", color));
+                deck.add(new CardUno("5", color));
+                deck.add(new CardUno("6", color));
+                deck.add(new CardUno("7", color));
+                deck.add(new CardUno("8", color));
+                deck.add(new CardUno("9", color));
+                deck.add(new CardUno("Skip", color));
+                deck.add(new CardUno("Draw 2", color));
+                deck.add(new CardUno("Reverse", color));
             }
 
-            deck.add(new Card("Wild", "Black"));
-            deck.add(new Card("Draw 4", "Black"));           
+            deck.add(new CardUno("Wild", "Black"));
+            deck.add(new CardUno("Draw 4", "Black"));           
         }
     }
 
@@ -59,7 +59,7 @@ public class GameUno extends Game {
     public void discard(Player currentPlayer, Card playedCard) {
         if (currentPlayer != null) {
             currentPlayer.getHand().remove(playedCard);
-            topCard = new Card(playedCard.getValue(), playedCard.getSuit()); 
+            topCard = new CardUno(playedCard.getValue(), playedCard.getSuit()); 
         } else {
             discardRandomTopCardFromDeck();
         }
@@ -69,7 +69,7 @@ public class GameUno extends Game {
     public void discardRandomTopCardFromDeck() {
         if (deck.isEmpty()) return;
         
-        topCard = new Card(deck.get(0).getValue(), deck.get(0).getSuit());
+        topCard = new CardUno(deck.get(0).getValue(), deck.get(0).getSuit());
         deck.remove(0);
 
 //        if (topCard.getValue().equals("Wild") || topCard.getValue().equals("Draw 4")) {

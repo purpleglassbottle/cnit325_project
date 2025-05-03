@@ -1,9 +1,15 @@
 package cardgame;
 
+/*
+* Cassie Kim
+* Xiaotong Luo
+* Sean Maloney
+* Emily Zhang
+*/
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import cardgame.*;
 
 /* main functions
 1. maintains stable connections
@@ -30,23 +36,28 @@ public class ClientHandler implements Runnable
     // constructor
     public ClientHandler(Socket s, GameServer server) 
     {
+        // Create server.
         this.s = s;
         this.server = server;
         
         try {
-        this.inStream = s.getInputStream();
-        this.outStream = s.getOutputStream();
-        this.in = new Scanner(inStream);
-        this.out = new PrintWriter(outStream, true); 
+            // Configure IO streams.
+            this.inStream = s.getInputStream();
+            this.outStream = s.getOutputStream();
+            
+            this.in = new Scanner(inStream);
+            this.out = new PrintWriter(outStream, true); 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
     
+    // Setters.
     public void setPlayer(Player player){
         this.player = player;
     }
     
+    // Getters.
     public Player getPlayer(){
         return this.player;
     }
@@ -151,8 +162,10 @@ public class ClientHandler implements Runnable
 ////            server.removeClient(this);
 //        } 
 //    }
+    
     public void sendHand(ArrayList<Card> hand) {
         StringBuilder handStr = new StringBuilder();
+        
         for (Card card : hand) {
             handStr.append(card.getSuit()).append(",").append(card.getValue()).append(";");
         }
@@ -164,5 +177,3 @@ public class ClientHandler implements Runnable
         System.out.println("[Server send] HAND:" + handStr.toString());
     }
 }
-
-
