@@ -27,13 +27,11 @@ public class SaveGame {
         this.s3 = AmazonS3ClientBuilder.standard().withRegion(region).build();
     }
 
-    /** Uploads JSON under "games/{gameId}.json" */
     public void save(String gameId, String jsonState) {
         String key = "games/" + gameId + ".json";
         s3.putObject(bucketName, key, jsonState);
     }
 
-    /** Downloads the JSON; returns empty if none exists. */
     public Optional<String> load(String gameId) {
         String key = "games/" + gameId + ".json";
         if (!s3.doesObjectExist(bucketName, key)) {
