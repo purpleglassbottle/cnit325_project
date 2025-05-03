@@ -12,9 +12,9 @@ package cardgame;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.S3Object;
-// Cassie
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
+//// Cassie
+//import com.amazonaws.auth.AWSStaticCredentialsProvider;
+//import com.amazonaws.auth.BasicAWSCredentials;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -27,8 +27,9 @@ public class SaveGame {
 
     public SaveGame(String bucketName, String region) {
         this.bucketName = bucketName;
-        this.s3 = AmazonS3ClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(
-        new BasicAWSCredentials("YOUR_ACCESS_KEY", "YOUR_SECRET_KEY"))).withRegion(region).build();
+        this.s3 = AmazonS3ClientBuilder.standard().withRegion(region).build();
+//        this.s3 = AmazonS3ClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(
+//        new BasicAWSCredentials("YOUR_ACCESS_KEY", "YOUR_SECRET_KEY"))).withRegion(region).build();
     }
 
     public void save(String gameId, String jsonState) {
