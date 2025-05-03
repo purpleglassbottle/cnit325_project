@@ -5,12 +5,6 @@ import java.net.*;
 import java.util.*;
 import cardgame.*;
 
-
-/**
- *
- * @author reign
- */
-
 /* main functions
 1. maintains stable connections
 2. each time one players connects, the server will create a clientHandler
