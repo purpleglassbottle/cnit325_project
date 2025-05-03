@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Random;
 import java.util.UUID;
 
 
@@ -43,14 +44,15 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
     Map.entry("8", "8"),
     Map.entry("9", "9"),
     Map.entry("Skip", "10"),
-    Map.entry("Draw 2", "11"),
-    Map.entry("Reverse", "12"),
+    Map.entry("Reverse", "11"),
+    Map.entry("Draw 2", "12"),
     Map.entry("Wild", "13"),
     Map.entry("Draw 4", "14")
 );
 
     private final Map<JButton, Integer> buttonIndexMap = new HashMap<>();
     private ArrayList<JButton> currentHandButtons = new ArrayList<JButton>();
+    private ArrayList<Card> lastReceivedHand = new ArrayList<>();
 
     //constructor
     public GameUnoGUI() {
@@ -96,7 +98,7 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
                     System.exit(0);
                 }
 
-                String s = JOptionPane.showInputDialog(null, getLocalizedText("Which player number are you? (0,1,…)"));
+                String s = JOptionPane.showInputDialog(null, getLocalizedText("Which player number are you? (0, 1, ...)"));
                 if (s == null) {
                     System.exit(0);
                 }
@@ -104,21 +106,27 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
             } else {
                 gameId = UUID.randomUUID().toString().substring(0, 6);
                 JOptionPane.showMessageDialog(null, getLocalizedText("Your game ID is: ") + gameId);
-                playerId = 0;                         // first joiner
+//                playerId = 0;                         // first joiner
+
+                String s = JOptionPane.showInputDialog(null, getLocalizedText("Which player number are you? (0, 1, ...)"));
+                if (s == null || s.isBlank()) {
+                    System.exit(0);
+                }
+                playerId = Integer.parseInt(s.trim());
             }
 
             this.client = new GameClient("localhost", 12345, load, gameId, playerId);
-
 //            this.client = new GameClient("localhost",12345);
             this.client.setGUI(this);
+            this.client.startListening();
+            this.client.sendMessage("INIT_GAME " + (load ? "LOAD " : "NEW ") + gameId);
+            this.client.sendMessage("HELLO " + playerId);
+            this.client.sendMessage("READY");
+            
             setupGUI();
             setVisible(true);
             System.out.println("Connected to the server");
-            
-//            this.client.sendMessage("READY");
-//            this.client.sendMessage("READY_ACK");
-
-                               
+             
         }catch(IOException e){            
             System.exit(1);
         }
@@ -175,9 +183,7 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
         
         settingsButton = new JButton(getLocalizedText("Settings"));
         bottomPanel.add(settingsButton);
-        
-        
-        
+       
         settingsButton.addActionListener(e -> {
             String[] languages = {"English", "한국어", "中文"};
             String selectedLanguage = (String) JOptionPane.showInputDialog(
@@ -206,14 +212,28 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
     //display player's handCards on GUI
     public void loadCardImages(ArrayList<Card> hand) {
         clearHandPanel();
+        buttonIndexMap.clear();
+        currentHandButtons.clear();
+        lastReceivedHand = new ArrayList<>(hand);
         
         for (int i = 0; i < hand.size(); i++) {
             Card card = hand.get(i);
             String filename = getCardFilename(card);
-            addCardButton(filename, card.getValue(), card.getSuit(), i);           
+            ImageIcon icon = loadScaledCardImage(filename); 
+            
+            if (icon == null) continue;
+
+            JButton button = createCardButton(icon, card.getValue(), card.getSuit(), i);
+            handPanel.add(button);
+            buttonIndexMap.put(button, i);
+            currentHandButtons.add(button);
         }
+
+        handPanel.revalidate();
+        handPanel.repaint();
+        this.lastReceivedHand = hand; 
     }
-    
+
     private void clearHandPanel() {
         handPanel.removeAll();
         buttonIndexMap.clear();
@@ -261,6 +281,20 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
         button.setPreferredSize(new Dimension(80, 120));
         
         button.addActionListener(e -> {
+            int realIndex = -1;
+            for (int i = 0; i < lastReceivedHand.size(); i++) {
+                Card c = lastReceivedHand.get(i);
+                if (c.getValue().equals(value) && c.getSuit().equals(suit)) {
+                    realIndex = i;
+                    break;
+                }
+            }
+
+            if (realIndex == -1) {
+                JOptionPane.showMessageDialog(this, "Card not found in hand list. Canceling play.");
+                return;
+            }
+
             if (value.equals("Wild") || value.equals("Draw 4")) {
                 String[] colors = {
                     getLocalizedText("Red"),
@@ -284,18 +318,16 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
                 }
 
                 String colorCode = colorWordToCode(selectedColor);
-                client.sendPlayCard(index, colorCode);
-                stopCountdown();
+                System.out.println("[DEBUG] Sending card: " + suit + " " + value + " (realIndex: " + realIndex + ")");
+                client.sendPlayCard(realIndex, colorCode);
             } else {
-                client.sendPlayCard(index, null);
-                stopCountdown();
+                client.sendPlayCard(realIndex, null);
             }
-
-        handPanel.remove(button);
-        currentHandButtons.remove(button);
-        handPanel.revalidate();
-        handPanel.repaint();
-        
+//        handPanel.remove(button);
+//        currentHandButtons.remove(button);
+//        handPanel.revalidate();
+//        handPanel.repaint();
+        stopCountdown();
         enableCardClicks(false);
         showTurnMessage(false);
     });
@@ -369,6 +401,27 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
 
                 if (timeLeft <= 0) {
                     countdownTimer.cancel();
+                    
+                SwingUtilities.invokeLater(() -> {
+                    if (isMyTurn()) {
+                        int index = getFirstPlayableCardIndex();
+                        if (index != -1 && lastReceivedHand != null && index < lastReceivedHand.size()) {
+                            Card card = lastReceivedHand.get(index);
+                            String value = card.getValue();
+
+                            if (value.equals("Wild") || value.equals("Draw 4")) {
+                                String[] colorCodes = {"R", "G", "B", "Y"};
+                                String randColor = colorCodes[new Random().nextInt(4)];
+                                client.sendPlayCard(index, randColor);
+                            } else {
+                                client.sendPlayCard(index, null);
+                            }
+
+                            enableCardClicks(false);
+                            showTurnMessage(false);
+                            }
+                        }
+                    });   
                 }
             }
         }, 1000, 1000);
@@ -380,6 +433,14 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
             countdownTimer = null;
         }
         SwingUtilities.invokeLater(() -> timerLabel.setText("")); 
+    }
+    
+    public int getFirstPlayableCardIndex() {
+        return currentHandButtons.isEmpty() ? -1 : 0;
+    }
+
+    public Card getCardFromHand(int index) {
+        return lastReceivedHand.get(index);
     }
     
     private String getLocalizedText(String text) {
@@ -408,6 +469,12 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
                 case "Settings" -> "설정";
                 case "Time left: " -> "남은 시간:";
                 case "s" -> "초";
+                case "New Game" -> "새 게임";
+                case "Continue" -> "이어하기";
+                case "Start a new game or continue?" -> "새 게임을 시작할까요, 아니면 이어서 할까요?";
+                case "Enter game ID:" -> "게임 ID를 입력하세요:";
+                case "Which player number are you? (0, 1, ...)" -> "당신은 몇 번 플레이어인가요? (0, 1, ...)";
+                case "Your game ID is: " -> "당신의 게임 ID는: ";
                 default -> text;
             };
             case "zh" -> switch (text) {
@@ -434,6 +501,12 @@ private final Map<String, String> valueToNumberMap = Map.ofEntries(
                 case "Settings" -> "设置";
                 case "Time left: " -> "剩余时间: ";
                 case "s" -> "秒";
+                case "New Game" -> "新游戏";
+                case "Continue" -> "继续";
+                case "Start a new game or continue?" -> "要开始新游戏还是继续?";
+                case "Enter game ID:" -> "请输入游戏 ID：";
+                case "Which player number are you? (0, 1, ...)" -> "你是几号玩家？（0，1，...）";
+                case "Your game ID is: " -> "你的游戏 ID 是：";
                 default -> text;
             };
             default -> text;

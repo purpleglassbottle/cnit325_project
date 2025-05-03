@@ -7,8 +7,12 @@ import java.net.Socket;
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Random;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.SwingUtilities;
 import javax.swing.JOptionPane;
+import javax.swing.Timer;
 
 public class GameClient {
     private Socket socket;
@@ -37,6 +41,23 @@ public class GameClient {
 //        }
 //    }
     
+    private final Map<String, String> numberToValueMap = Map.ofEntries(
+        Map.entry("1", "1"),
+        Map.entry("2", "2"),
+        Map.entry("3", "3"),
+        Map.entry("4", "4"),
+        Map.entry("5", "5"),
+        Map.entry("6", "6"),
+        Map.entry("7", "7"),
+        Map.entry("8", "8"),
+        Map.entry("9", "9"),
+        Map.entry("10", "Skip"),
+        Map.entry("11", "Reverse"),
+        Map.entry("12", "Draw 2"),
+        Map.entry("13", "Wild"),
+        Map.entry("14", "Draw 4")
+    );
+    
     // Legacy Connections
     public GameClient(String h, int p) throws IOException {
         this(h, p, false, "new", 0);
@@ -49,17 +70,22 @@ public class GameClient {
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
        
-            out.println("INIT_GAME " + (load ? "LOAD " : "NEW ") + gameId);
-            out.println("HELLO " + playerId);
-            out.println("READY_ACK");
+//            out.println("INIT_GAME " + (load ? "LOAD " : "NEW ") + gameId);
+//            out.println("HELLO " + playerId);
+//            out.println("READY_ACK");
 
-            new Thread(this::listenToServer).start();
+//            new Thread(this::listenToServer).start();
 
         } catch (IOException e) {
             e.printStackTrace();
         }
 
     }
+    
+    public void startListening() {
+        new Thread(this::listenToServer).start();
+    }    
+    
     private void listenToServer() {
         try {
             String message;
@@ -151,7 +177,12 @@ public class GameClient {
             System.out.println("Parse failed, wrong format: " + card);
             continue;
         }
-            hand.add(new Card(parts[1], parts[0])); // value,suit
+            String suit = parts[0];
+            String valueCode = parts[1];
+
+            String value = numberToValueMap.getOrDefault(valueCode, valueCode);
+            
+            hand.add(new Card(value, suit)); // value,suit
         }
         return hand;
     }
@@ -159,6 +190,7 @@ public class GameClient {
     public void sendPlayCard(int index, String color) {
         String message = "PLAY_CARD " + index + " " + color;
         out.println(message);
+        System.out.println("[DEBUG] Sending card index: " + index + ", color: " + color);
 //        System.out.println("[Sent to Server] " + message);
     }
     

@@ -80,13 +80,13 @@ public class GameServer {
 //            selectedLocale = Locale.ENGLISH;
 //        }
         // more s3 - restore a saved game
-        Optional<String> maybeJson = storage.load(gameId);
-        
-        if(maybeJson.isPresent()){
-            GameState restored = new Gson().fromJson(maybeJson.get(), GameState.class);
-            restoreFrom(restored);
-            System.out.println("[SERVER] restored game with s3");
-        }
+//        Optional<String> maybeJson = storage.load(gameId);
+//        
+//        if(maybeJson.isPresent()){
+//            GameState restored = new Gson().fromJson(maybeJson.get(), GameState.class);
+//            restoreFrom(restored);
+//            System.out.println("[SERVER] restored game with s3");
+//        }
         
         
         String[] options = {"2", "3", "4"};
@@ -104,6 +104,13 @@ public class GameServer {
         }
         
         expectedPlayers = Integer.parseInt(input);
+        
+        Optional<String> maybeJson = (gameId != null) ? storage.load(gameId) : Optional.empty();
+        if (maybeJson.isPresent()) {
+            GameState restored = new Gson().fromJson(maybeJson.get(), GameState.class);
+            restoreFrom(restored);
+            System.out.println("[SERVER] restored game with s3");
+        }
             
         try {   
             serverSocket = new ServerSocket(port);
@@ -179,7 +186,7 @@ public class GameServer {
                 return false;
 
         Player p;
-        if (id < players.size()) {                     // loaded game → reuse
+        if (id < players.size() && players.get(id) != null) {                     // loaded game → reuse
             p = players.get(id);
         } else {                                       // fresh game → create
             p = new Player(id, "Player" + id);
@@ -246,18 +253,31 @@ public class GameServer {
             game.dealCards(p, game.getDealCount());
         }
         // Create a discard pile.
-        game.discard(null, 0);//will set a topCard too
+        ((GameUno) game).discardRandomTopCardFromDeck();
         
         if (game.getTopCard() == null) {
             System.out.println("[SERVER] topCard is STILL null after discard()!!");
         } else {
             System.out.println("[SERVER] topCard set to: " + game.getTopCard().getSuit() + " " + game.getTopCard().getValue());
         }
+        
+        sendInitialHands();
 
         gameStarted = true;
         System.out.println("Server is going to broadcast the initial GameState");
         broadcastGameState();
+        
+        sendTurnPrompt();
     } // End public void startGame.    
+    
+    private void sendInitialHands() {
+        for (int i = 0; i < clients.size(); i++) {
+            ClientHandler handler = clients.get(i);
+            Player player = players.get(i);
+            System.out.println("[SERVER] Sending HAND to Player" + i);
+            handler.sendHand(player.getHand());
+        }
+    }
 
     public void broadcast(String msg) {
         for (ClientHandler client : clients) {
@@ -432,6 +452,7 @@ public class GameServer {
         
         Player player = src.getPlayer();
         int result = ((GameUno) game).playCard(player, idx, color);
+        System.out.println("[DEBUG] processPlay() received index: " + idx + ", interpreted as: " + game.getTopCard().getSuit() + " " + game.getTopCard().getValue());
         
         if (result == -1) {
             src.sendMessage("ERROR:Invalid move");
@@ -440,7 +461,7 @@ public class GameServer {
             game.dealCards(player, 1); 
             broadcast("[Server] " + player.getPlayerName() + " drew a card.");
             
-//            changeTurn();
+            changeTurn();
             broadcastGameState();  
             changeTurn();
             sendTurnPrompt();           
@@ -462,6 +483,8 @@ public class GameServer {
         broadcastGameState();   
         sendTurnPrompt();
         
+        System.out.println("[DEBUG] TURN is now: " + turn + " / Direction: " + (clockwise ? "→" : "←"));
+        
         // save after every move is done
         GameState snapshot = captureCurrentState();
         storage.save(gameId, new Gson().toJson(snapshot));
@@ -475,19 +498,20 @@ public class GameServer {
                 // Cassie
                 changeTurn(); 
                 changeTurn(); 
-                broadcastGameState();  
-                sendTurnPrompt();    
+//                broadcastGameState();  
+//                sendTurnPrompt();    
                 break;
             case 2:  // Draw 2
-                int nextTurn = (turn + 1) % players.size();
-                Player p2 = players.get(nextTurn);
+//                int nextTurn = (turn + 1) % players.size();
+                Player p2 = players.get(turn);
                 
                 game.dealCards(p2, 2);                     
                 broadcast(p2.getPlayerName() + " draws 2.");
-                broadcastGameState(); 
-                sendTurnPrompt();    
+                
+//                broadcastGameState(); 
+//                sendTurnPrompt();    
 
-                turn = nextTurn;
+//                turn = nextTurn;
                 changeTurn(); 
                 break;
 //                changeTurn();
@@ -503,20 +527,21 @@ public class GameServer {
                 if (players.size() == 2) {
                     changeTurn();
                 }                
-                broadcastGameState();   
-                sendTurnPrompt();       
+//                broadcastGameState();   
+//                sendTurnPrompt();       
                 break;
             case 4:  // Draw 4
-                int nextTurn4 = (turn + 1) % players.size();
-                Player p4 = players.get(nextTurn4);
+//                int nextTurn4 = (turn + 1) % players.size();
+                changeTurn();
+                Player p4 = players.get(turn);
 
                 game.dealCards(p4, 4);
                 broadcast(p4.getPlayerName() + " draws 4.");
 
-                broadcastGameState();
-                sendTurnPrompt();
+//                broadcastGameState();
+//                sendTurnPrompt();
 
-                turn = nextTurn4;
+//                turn = nextTurn4;
                 changeTurn();
                 break;
 //                changeTurn();
@@ -530,6 +555,8 @@ public class GameServer {
                 changeTurn(); 
                 break;
         }
+        broadcastGameState();  
+        sendTurnPrompt();  
     }
     
     // emily

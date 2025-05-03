@@ -151,5 +151,18 @@ public class ClientHandler implements Runnable
 ////            server.removeClient(this);
 //        } 
 //    }
+    public void sendHand(ArrayList<Card> hand) {
+        StringBuilder handStr = new StringBuilder();
+        for (Card card : hand) {
+            handStr.append(card.getSuit()).append(",").append(card.getValue()).append(";");
+        }
+        // remove trailing semicolon
+        if (handStr.length() > 0) {
+            handStr.setLength(handStr.length() - 1);
+        }
+        out.println("HAND:" + handStr.toString());
+        System.out.println("[Server send] HAND:" + handStr.toString());
+    }
 }
+
 

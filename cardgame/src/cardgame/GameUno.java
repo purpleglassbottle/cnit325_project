@@ -7,6 +7,8 @@ package cardgame;
 * Emily Zhang
 */
 
+import java.util.Random;
+
 public class GameUno extends Game {
     
     //xiaotong 4/24
@@ -53,26 +55,38 @@ public class GameUno extends Game {
     //updated on 4/24
     // Cassie
     // Fixed some logics
+    @Override
     public void discard(Player currentPlayer, Card playedCard) {
         if (currentPlayer != null) {
             currentPlayer.getHand().remove(playedCard);
-            topCard = playedCard;
+            topCard = new Card(playedCard.getValue(), playedCard.getSuit()); 
         } else {
-            topCard = new Card(deck.get(0).getValue(), deck.get(0).getSuit()); 
-            deck.remove(0);
-        
-            // 
-            if (topCard.getValue().equals("Wild") || topCard.getValue().equals("Draw 4")) {
-                topCard.setSuit("Black");  
-            } else if (topCard.getValue().equals("Skip") || topCard.getValue().equals("Draw 2")) {
-                if (!deck.isEmpty()) {
-                    discard(null, 0); 
-                }
-              }
+            discardRandomTopCardFromDeck();
         }
-        //to check whether topCard has been updated
         System.out.println("New top card: " + topCard.getValue() + " " + topCard.getSuit());
     }
+    
+    public void discardRandomTopCardFromDeck() {
+        if (deck.isEmpty()) return;
+        
+        topCard = new Card(deck.get(0).getValue(), deck.get(0).getSuit());
+        deck.remove(0);
+
+//        if (topCard.getValue().equals("Wild") || topCard.getValue().equals("Draw 4")) {
+//            topCard.setSuit("Black");
+//        } else if (topCard.getValue().equals("Skip") || topCard.getValue().equals("Draw 2")) {
+//            if (!deck.isEmpty()) {
+//                discardRandomTopCardFromDeck();  
+//        }
+
+        if (topCard.getValue().equals("Wild") || topCard.getValue().equals("Draw 4")) {
+        discardRandomTopCardFromDeck(); 
+        return;
+        }
+
+        System.out.println("New top card: " + topCard.getValue() + " " + topCard.getSuit());
+        
+    }    
     
     //deleted by xiaotong for now
     /*public void discard(Player currentPlayer, int index) {
@@ -107,6 +121,11 @@ public class GameUno extends Game {
             if (playedValue.equals("Wild") || playedValue.equals("Draw 4")) {
                 if (chosenColor != null) {
                     play.setSuit(colorCodeToWord(chosenColor)); 
+                } else {
+                String[] fallbackColors = {"Red", "Blue", "Green", "Yellow"};
+                String randomColor = fallbackColors[new Random().nextInt(fallbackColors.length)];
+                play.setSuit(randomColor);
+                System.out.println("[SERVER] No color chosen - fallback to: " + randomColor);
                 }
             }
 
