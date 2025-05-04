@@ -7,3 +7,8 @@
 4. Click on the Classpath [+] button and select Add JAR/Folder.
 5. Open both C:\Program Files\Java\aws-java-sdk-bundle-1.12.782 and C:\Program Files\Java\gson-2.13.1.
 6. Clean and Build the project.
+
+## AWS S3 
+If you would like to test the functionality of S3, please email zhan4509@purdue.edu 
+your AWS canonical ID and you will be added to the S3 bucket. Then, you will receive
+a secret key and an access key that you can use to access. 
